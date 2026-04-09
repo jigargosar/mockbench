@@ -25,7 +25,6 @@ Each page is a landing page with a usable wireframe inside the product.
 - Moqups, MockFlow, Mockplus — various quality, none own the "sketchy wireframe" niche on the web
 
 ## Technical decisions
-- Pure SVG (not canvas) — better React integration, DOM events, accessibility
 - RoughJS for hand-drawn paths
 - Zustand for state (camera, elements, tools as separate stores)
 - Vite + React + TypeScript + Tailwind v4
