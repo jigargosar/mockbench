@@ -21,13 +21,10 @@
         "vite": "8.0.8"
     },
     "dependencies": {
-        "@scena/react-guides": "0.28.2",
         "react": "19.2.5",
         "react-dom": "19.2.5",
-        "react-infinite-viewer": "0.28.1",
-        "react-moveable": "0.56.0",
-        "react-selecto": "1.26.3",
         "roughjs": "4.6.6",
+        "zundo": "2.3.0",
         "zustand": "5.0.12"
     }
 }
