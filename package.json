@@ -21,6 +21,8 @@
         "vite": "8.0.8"
     },
     "dependencies": {
+        "mobx": "6.15.0",
+        "mobx-react": "9.2.1",
         "react": "19.2.5",
         "react-dom": "19.2.5",
         "roughjs": "4.6.6",
