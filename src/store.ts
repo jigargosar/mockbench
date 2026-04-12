@@ -94,4 +94,36 @@ export class CanvasStore extends Model({
         }
         this.drawing = null
     }
+
+    @modelAction
+    handleMouseDown(x: number, y: number) {
+        const hit = this.hitTest(x, y)
+        if (hit) {
+            this.selectRect(hit.id)
+            return
+        }
+        this.startDrawing(x, y)
+    }
+
+    @modelAction
+    handleMouseMove(x: number, y: number) {
+        this.updateDrawing(x, y)
+    }
+
+    @modelAction
+    handleKeyDown(key: string) {
+        if (key === 'Delete' || key === 'Backspace') {
+            this.deleteSelected()
+        } else if (key === 'Escape') {
+            this.selectRect(null)
+        }
+    }
+
+    private hitTest(x: number, y: number): Rect | undefined {
+        for (let i = this.rects.length - 1; i >= 0; i--) {
+            const r = this.rects[i]
+            if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r
+        }
+        return undefined
+    }
 }
