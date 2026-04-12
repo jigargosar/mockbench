@@ -26,6 +26,19 @@ export class CanvasStore extends Model({
     drawing: tProp(types.maybeNull(types.model(Drawing)), null),
 }) {
     @modelAction
+    selectRect(id: string | null) {
+        this.selectedId = id
+    }
+
+    @modelAction
+    deleteSelected() {
+        if (!this.selectedId) return
+        const idx = this.rects.findIndex(r => r.id === this.selectedId)
+        if (idx >= 0) this.rects.splice(idx, 1)
+        this.selectedId = null
+    }
+
+    @modelAction
     startDrawing(x: number, y: number) {
         this.selectedId = null
         this.drawing = new Drawing({
