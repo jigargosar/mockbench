@@ -1,4 +1,5 @@
 import { model, Model, tProp, types, idProp, modelAction } from 'mobx-keystone'
+import { computed } from 'mobx'
 
 @model('mockbench/Rect')
 export class Rect extends Model({
@@ -17,7 +18,17 @@ export class Drawing extends Model({
     x1: tProp(types.number),
     y1: tProp(types.number),
     seed: tProp(types.number),
-}) {}
+}) {
+    @computed
+    get bounds() {
+        return {
+            x: Math.min(this.x0, this.x1),
+            y: Math.min(this.y0, this.y1),
+            w: Math.abs(this.x1 - this.x0),
+            h: Math.abs(this.y1 - this.y0),
+        }
+    }
+}
 
 @model('mockbench/CanvasStore')
 export class CanvasStore extends Model({
@@ -25,6 +36,26 @@ export class CanvasStore extends Model({
     selectedId: tProp(types.maybeNull(types.string), null),
     drawing: tProp(types.maybeNull(types.model(Drawing)), null),
 }) {
+    @computed
+    get hasSelection(): boolean {
+        return this.selectedId !== null
+    }
+
+    @computed
+    get selectedRect(): Rect | undefined {
+        return this.selectedId
+            ? this.rects.find(r => r.id === this.selectedId)
+            : undefined
+    }
+
+    @computed
+    get previewRect(): { x: number; y: number; w: number; h: number; seed: number } | null {
+        if (!this.drawing) return null
+        const { bounds, seed } = this.drawing
+        if (bounds.w <= 0 || bounds.h <= 0) return null
+        return { ...bounds, seed }
+    }
+
     @modelAction
     selectRect(id: string | null) {
         this.selectedId = id
@@ -57,13 +88,9 @@ export class CanvasStore extends Model({
     @modelAction
     finishDrawing() {
         if (!this.drawing) return
-        const d = this.drawing
-        const x = Math.min(d.x0, d.x1)
-        const y = Math.min(d.y0, d.y1)
-        const w = Math.abs(d.x1 - d.x0)
-        const h = Math.abs(d.y1 - d.y0)
-        if (w > 2 && h > 2) {
-            this.rects.push(new Rect({ x, y, w, h, seed: d.seed }))
+        const { bounds, seed } = this.drawing
+        if (bounds.w > 2 && bounds.h > 2) {
+            this.rects.push(new Rect({ ...bounds, seed }))
         }
         this.drawing = null
     }
