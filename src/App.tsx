@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, memo } from 'react'
+import { observer, useLocalObservable } from 'mobx-react-lite'
+import { type MouseEvent } from 'react'
 import rough from 'roughjs'
+
+const generator = rough.generator()
 
 type Rect = {
     id: string
@@ -35,108 +39,129 @@ function hitTest(rects: Rect[], x: number, y: number): Rect | undefined {
     return undefined
 }
 
-export default function App() {
-    const svgRef = useRef<SVGSVGElement>(null)
-    const [rects, setRects] = useState<Rect[]>([])
-    const [drawing, setDrawing] = useState<Drawing | null>(null)
-    const [selectedId, setSelectedId] = useState<string | null>(null)
+const RoughRect = memo(function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: number; seed: number }) {
+    const paths = useMemo(
+        () => generator.toPaths(generator.rectangle(x, y, w, h, { seed })),
+        [x, y, w, h, seed],
+    )
+    return (
+        <g>
+            {paths.map((p, i) => (
+                <path key={i} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
+            ))}
+        </g>
+    )
+})
 
-    useEffect(() => {
-        const svg = svgRef.current
-        if (!svg) return
-        while (svg.firstChild) svg.removeChild(svg.firstChild)
-        const rc = rough.svg(svg)
-        for (const r of rects) {
-            svg.appendChild(rc.rectangle(r.x, r.y, r.w, r.h, { seed: r.seed }))
-        }
-        if (drawing) {
-            const b = drawingBounds(drawing)
-            if (b.w > 0 && b.h > 0) {
-                svg.appendChild(rc.rectangle(b.x, b.y, b.w, b.h, { seed: drawing.seed }))
+const Preview = observer(function Preview({ store }: { store: { drawing: Drawing | null } }) {
+    if (!store.drawing) return null
+    const b = drawingBounds(store.drawing)
+    if (b.w <= 0 || b.h <= 0) return null
+    return <RoughRect x={b.x} y={b.y} w={b.w} h={b.h} seed={store.drawing.seed} />
+})
+
+const SelectionBorder = observer(function SelectionBorder({ store }: { store: { selectedId: string | null; rects: Rect[] } }) {
+    if (!store.selectedId) return null
+    const sel = store.rects.find(r => r.id === store.selectedId)
+    if (!sel) return null
+    return (
+        <rect
+            x={sel.x - 4}
+            y={sel.y - 4}
+            width={sel.w + 8}
+            height={sel.h + 8}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth={1}
+            strokeDasharray="4 2"
+        />
+    )
+})
+
+export default observer(function App() {
+    const store = useLocalObservable(() => ({
+        rects: [] as Rect[],
+        drawing: null as Drawing | null,
+        selectedId: null as string | null,
+
+        selectRect(id: string | null) {
+            this.selectedId = id
+        },
+        deleteSelected() {
+            if (!this.selectedId) return
+            this.rects = this.rects.filter(r => r.id !== this.selectedId)
+            this.selectedId = null
+        },
+        startDrawing(x: number, y: number) {
+            this.selectedId = null
+            this.drawing = {
+                x0: x, y0: y, x1: x, y1: y,
+                seed: Math.floor(Math.random() * 10000),
             }
-        }
-        if (selectedId) {
-            const sel = rects.find(r => r.id === selectedId)
-            if (sel) {
-                const border = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-                border.setAttribute('x', String(sel.x - 4))
-                border.setAttribute('y', String(sel.y - 4))
-                border.setAttribute('width', String(sel.w + 8))
-                border.setAttribute('height', String(sel.h + 8))
-                border.setAttribute('fill', 'none')
-                border.setAttribute('stroke', '#3b82f6')
-                border.setAttribute('stroke-width', '1')
-                border.setAttribute('stroke-dasharray', '4 2')
-                svg.appendChild(border)
+        },
+        updateDrawing(x: number, y: number) {
+            if (!this.drawing) return
+            this.drawing.x1 = x
+            this.drawing.y1 = y
+        },
+        finishDrawing() {
+            if (!this.drawing) return
+            const b = drawingBounds(this.drawing)
+            if (b.w > 2 && b.h > 2) {
+                this.rects.push({ id: crypto.randomUUID(), ...b, seed: this.drawing.seed })
             }
-        }
-    }, [rects, drawing, selectedId])
+            this.drawing = null
+        },
+        handleMouseDown(x: number, y: number) {
+            const hit = hitTest(this.rects, x, y)
+            if (hit) {
+                this.selectRect(hit.id)
+                return
+            }
+            this.startDrawing(x, y)
+        },
+        handleMouseMove(x: number, y: number) {
+            this.updateDrawing(x, y)
+        },
+        handleKeyDown(key: string) {
+            if (key === 'Delete' || key === 'Backspace') {
+                this.deleteSelected()
+            } else if (key === 'Escape') {
+                this.selectRect(null)
+            }
+        },
+    }))
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedId) {
-                    e.preventDefault()
-                    setRects(prev => prev.filter(r => r.id !== selectedId))
-                    setSelectedId(null)
-                }
-            } else if (e.key === 'Escape') {
-                setSelectedId(null)
+            if ((e.key === 'Delete' || e.key === 'Backspace') && store.selectedId) {
+                e.preventDefault()
             }
+            store.handleKeyDown(e.key)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [selectedId])
+    }, [store])
 
     const pointFromEvent = (e: MouseEvent<SVGSVGElement>) => {
         const box = e.currentTarget.getBoundingClientRect()
         return { x: e.clientX - box.left, y: e.clientY - box.top }
     }
 
-    const onMouseDown = (e: MouseEvent<SVGSVGElement>) => {
-        const { x, y } = pointFromEvent(e)
-        const hit = hitTest(rects, x, y)
-        if (hit) {
-            setSelectedId(hit.id)
-            return
-        }
-        setSelectedId(null)
-        setDrawing({
-            x0: x,
-            y0: y,
-            x1: x,
-            y1: y,
-            seed: Math.floor(Math.random() * 10000),
-        })
-    }
-
-    const onMouseMove = (e: MouseEvent<SVGSVGElement>) => {
-        if (!drawing) return
-        const { x, y } = pointFromEvent(e)
-        setDrawing({ ...drawing, x1: x, y1: y })
-    }
-
-    const onMouseUp = () => {
-        if (!drawing) return
-        const b = drawingBounds(drawing)
-        if (b.w > 2 && b.h > 2) {
-            setRects(prev => [
-                ...prev,
-                { id: crypto.randomUUID(), ...b, seed: drawing.seed },
-            ])
-        }
-        setDrawing(null)
-    }
-
     return (
         <div className="h-screen w-screen overflow-hidden bg-white">
             <svg
-                ref={svgRef}
                 className="h-full w-full"
-                onMouseDown={onMouseDown}
-                onMouseMove={onMouseMove}
-                onMouseUp={onMouseUp}
-            />
+                onMouseDown={e => { const { x, y } = pointFromEvent(e); store.handleMouseDown(x, y) }}
+                onMouseMove={e => { const { x, y } = pointFromEvent(e); store.handleMouseMove(x, y) }}
+                onMouseUp={() => store.finishDrawing()}
+            >
+                {store.rects.map(r => (
+                    <RoughRect key={r.id} x={r.x} y={r.y} w={r.w} h={r.h} seed={r.seed} />
+                ))}
+                <Preview store={store} />
+                <SelectionBorder store={store} />
+            </svg>
         </div>
     )
-}
+})
