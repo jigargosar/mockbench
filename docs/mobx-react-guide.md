@@ -26,11 +26,11 @@ Concrete rules. Examples linked, not inlined.
    Why: flow auto-wraps each yield, supports cancellation.
    [docs](https://mobx.js.org/actions.html#using-flow-instead-of-async--await-)
 
-7. Computed values are NOT cached when read outside a reaction
-   Why: Computeds memoize only when an active observer tracks them. Otherwise full recompute every read.
+7. Read computed values only inside a reaction (observer/autorun/reaction)
+   Why: Computeds memoize only when an active observer tracks them. Outside = full recompute every read.
    [docs](https://mobx.js.org/computeds.html#tips)
 
-8. `enforceActions: 'observed'` is the recommended default
+8. Use `enforceActions: 'observed'` (the default)
    Why: Strict enough to catch mutations to observed state, loose enough to allow construction.
    [docs](https://mobx.js.org/configuration.html#linting-options)
 
@@ -78,7 +78,7 @@ Concrete rules. Examples linked, not inlined.
     Why: When items are added/removed/reordered, index-keyed components reuse the wrong instances — ghost state.
     [docs](https://mobx.js.org/react-optimizations.html#dont-use-array-indexes-as-keys)
 
-20. Window event listener: subscribe in setup, unsubscribe in cleanup
+20. Always pair `addEventListener` with `removeEventListener` in cleanup
     Why: Without cleanup, listener accumulates on every effect re-run.
     [docs](https://react.dev/learn/synchronizing-with-effects#subscribing-to-events)
 
@@ -102,12 +102,12 @@ Concrete rules. Examples linked, not inlined.
     Why: Concurrent-safe and tear-free. useEffect+useState mirroring can show stale values during concurrent renders.
     [docs](https://react.dev/reference/react/useSyncExternalStore)
 
-26. Effects = side effects from rendering. Event handlers = side effects from interactions.
-    Why: Notifications/messages on user click belong in handlers, not effects.
+26. Put user-triggered side effects in event handlers, not Effects
+    Why: Effects re-run on render. A notification triggered by a click belongs in the click handler, or it fires on every render.
     [docs](https://react.dev/learn/you-might-not-need-an-effect#sending-an-analytics-event)
 
-27. Test with StrictMode on. Effects run setup → cleanup → setup in dev.
-    Why: If your effect breaks under double-invocation, the cleanup is incomplete.
+27. Keep StrictMode enabled in dev
+    Why: Effects run setup → cleanup → setup in dev. If your effect breaks under double-invocation, the cleanup is incomplete.
     [docs](https://react.dev/reference/react/useEffect#caveats)
 
 28. Pass a function to `useState` for expensive initialization, not the result
@@ -130,8 +130,8 @@ Concrete rules. Examples linked, not inlined.
     Why: Otherwise they add overhead without benefit.
     [docs](https://react.dev/reference/react/useMemo#should-you-add-usememo-everywhere)
 
-33. `React.memo` does shallow Object.is comparison
-    Why: New object/array/function references each render = memo always sees "different."
+33. Don't create new objects/arrays/functions as props to memo'd components
+    Why: React.memo uses Object.is shallow compare. Inline literals get new identity each render — memo always sees "different."
     [docs](https://react.dev/reference/react/memo#minimizing-props-changes)
 
 34. Custom `arePropsEqual` must compare every prop, including functions
@@ -146,7 +146,7 @@ Concrete rules. Examples linked, not inlined.
     Why: React preserves state by position+key. Same position + new key = teardown + fresh mount.
     [docs](https://react.dev/learn/preserving-and-resetting-state#resetting-state-with-a-key)
 
-37. Component bodies must be pure (StrictMode renders twice)
+37. Keep component bodies pure
     Why: StrictMode double-invokes render to detect impurity. Side effects during render run twice or more.
     [docs](https://react.dev/learn/keeping-components-pure)
 
@@ -174,6 +174,6 @@ Concrete rules. Examples linked, not inlined.
     Why: Destructuring reads the property eagerly outside the observer's tracking, breaking reactivity.
     [docs](https://github.com/mobxjs/mobx/issues/2992)
 
-44. `observer` is the innermost (first applied) decorator
+44. Apply `observer` last (innermost) in HOC chains
     Why: If wrapped by another HOC first, observer's reaction may not be set up correctly.
     [docs](https://mobx.js.org/react-integration.html)
