@@ -94,12 +94,16 @@ export class CanvasStore {
         this.drawing = null
     }
 
+    private deleteSelected() {
+        if (!this.selectedId) return
+        const idx = this.rects.findIndex(r => r.id === this.selectedId)
+        if (idx >= 0) this.rects.splice(idx, 1)
+        this.selectedId = null
+    }
+
     handleKeyDown(key: string) {
         if (key === 'Delete' || key === 'Backspace') {
-            if (!this.selectedId) return
-            const idx = this.rects.findIndex(r => r.id === this.selectedId)
-            if (idx >= 0) this.rects.splice(idx, 1)
-            this.selectedId = null
+            this.deleteSelected()
         } else if (key === 'Escape') {
             this.selectedId = null
         }
