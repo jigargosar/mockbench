@@ -1,22 +1,33 @@
-import { useEffect, useMemo, memo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { type MouseEvent } from 'react'
 import rough from 'roughjs'
-import { CanvasStore } from './store'
+import { CanvasStore, type Rect } from './store'
 
 const generator = rough.generator()
 
-const RoughRect = memo(function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: number; seed: number }) {
-    const paths = useMemo(
-        () => generator.toPaths(generator.rectangle(x, y, w, h, { seed })),
-        [x, y, w, h, seed],
-    )
+function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: number; seed: number }) {
+    const paths = generator.toPaths(generator.rectangle(x, y, w, h, { seed }))
     return (
         <g>
             {paths.map((p, i) => (
                 <path key={i} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
             ))}
         </g>
+    )
+}
+
+const RectItem = observer(function RectItem({ rect }: { rect: Rect }) {
+    return <RoughRect x={rect.x} y={rect.y} w={rect.w} h={rect.h} seed={rect.seed} />
+})
+
+const RectsView = observer(function RectsView({ store }: { store: CanvasStore }) {
+    return (
+        <>
+            {store.rects.map(r => (
+                <RectItem rect={r} key={r.id} />
+            ))}
+        </>
     )
 })
 
@@ -43,7 +54,7 @@ const SelectionBorder = observer(function SelectionBorder({ store }: { store: Ca
     )
 })
 
-export default observer(function App() {
+export default function App() {
     const [store] = useState(() => new CanvasStore())
 
     useEffect(() => {
@@ -68,12 +79,10 @@ export default observer(function App() {
                 onMouseMove={e => { const { x, y } = pointFromEvent(e); store.handleMouseMove(x, y) }}
                 onMouseUp={() => store.handleMouseUp()}
             >
-                {store.rects.map(r => (
-                    <RoughRect key={r.id} x={r.x} y={r.y} w={r.w} h={r.h} seed={r.seed} />
-                ))}
+                <RectsView store={store} />
                 <Preview store={store} />
                 <SelectionBorder store={store} />
             </svg>
         </div>
     )
-})
+}
