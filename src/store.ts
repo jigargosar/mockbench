@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx'
+import { makeAutoObservable, reaction } from 'mobx'
 
 export type Rect = {
     id: string
@@ -9,7 +9,7 @@ export type Rect = {
     seed: number
 }
 
-export type Drawing = {
+type Drawing = {
     x0: number
     y0: number
     x1: number
@@ -36,11 +36,17 @@ function hitTest(rects: Rect[], x: number, y: number): Rect | undefined {
 
 export class CanvasStore {
     rects: Rect[] = []
-    drawing: Drawing | null = null
-    selectedId: string | null = null
+    private drawing: Drawing | null = null
+    private selectedId: string | null = null
 
     constructor() {
-        makeAutoObservable(this)
+        makeAutoObservable(this, {}, { autoBind: true })
+        reaction(
+            () => this.drawing !== null && this.selectedId !== null,
+            (invalid) => {
+                if (invalid) throw new Error('Invalid state: drawing and selection coexist')
+            },
+        )
     }
 
     get hasSelection(): boolean {
@@ -60,18 +66,12 @@ export class CanvasStore {
         return { ...b, seed: this.drawing.seed }
     }
 
-    selectRect(id: string | null) {
-        this.selectedId = id
-    }
-
-    deleteSelected() {
-        if (!this.selectedId) return
-        const idx = this.rects.findIndex(r => r.id === this.selectedId)
-        if (idx >= 0) this.rects.splice(idx, 1)
-        this.selectedId = null
-    }
-
-    startDrawing(x: number, y: number) {
+    handleMouseDown(x: number, y: number) {
+        const hit = hitTest(this.rects, x, y)
+        if (hit) {
+            this.selectedId = hit.id
+            return
+        }
         this.selectedId = null
         this.drawing = {
             x0: x, y0: y, x1: x, y1: y,
@@ -79,13 +79,13 @@ export class CanvasStore {
         }
     }
 
-    updateDrawing(x: number, y: number) {
+    handleMouseMove(x: number, y: number) {
         if (!this.drawing) return
         this.drawing.x1 = x
         this.drawing.y1 = y
     }
 
-    finishDrawing() {
+    handleMouseUp() {
         if (!this.drawing) return
         const b = drawingBounds(this.drawing)
         if (b.w > 2 && b.h > 2) {
@@ -94,24 +94,14 @@ export class CanvasStore {
         this.drawing = null
     }
 
-    handleMouseDown(x: number, y: number) {
-        const hit = hitTest(this.rects, x, y)
-        if (hit) {
-            this.selectRect(hit.id)
-            return
-        }
-        this.startDrawing(x, y)
-    }
-
-    handleMouseMove(x: number, y: number) {
-        this.updateDrawing(x, y)
-    }
-
     handleKeyDown(key: string) {
         if (key === 'Delete' || key === 'Backspace') {
-            this.deleteSelected()
+            if (!this.selectedId) return
+            const idx = this.rects.findIndex(r => r.id === this.selectedId)
+            if (idx >= 0) this.rects.splice(idx, 1)
+            this.selectedId = null
         } else if (key === 'Escape') {
-            this.selectRect(null)
+            this.selectedId = null
         }
     }
 }

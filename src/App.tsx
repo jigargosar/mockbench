@@ -76,7 +76,7 @@ export default observer(function App() {
                 className="h-full w-full"
                 onMouseDown={e => { const { x, y } = pointFromEvent(e); store.handleMouseDown(x, y) }}
                 onMouseMove={e => { const { x, y } = pointFromEvent(e); store.handleMouseMove(x, y) }}
-                onMouseUp={() => store.finishDrawing()}
+                onMouseUp={() => store.handleMouseUp()}
             >
                 {store.rects.map(r => (
                     <RoughRect key={r.id} x={r.x} y={r.y} w={r.w} h={r.h} seed={r.seed} />
