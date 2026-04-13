@@ -49,10 +49,6 @@ export class CanvasStore {
         )
     }
 
-    get hasSelection(): boolean {
-        return this.selectedId !== null
-    }
-
     get selectedRect(): Rect | undefined {
         return this.selectedId
             ? this.rects.find(r => r.id === this.selectedId)
@@ -94,18 +90,14 @@ export class CanvasStore {
         this.drawing = null
     }
 
-    private deleteSelected() {
+    deleteSelected() {
         if (!this.selectedId) return
         const idx = this.rects.findIndex(r => r.id === this.selectedId)
         if (idx >= 0) this.rects.splice(idx, 1)
         this.selectedId = null
     }
 
-    handleKeyDown(key: string) {
-        if (key === 'Delete' || key === 'Backspace') {
-            this.deleteSelected()
-        } else if (key === 'Escape') {
-            this.selectedId = null
-        }
+    clearSelection() {
+        this.selectedId = null
     }
 }

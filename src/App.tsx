@@ -1,6 +1,5 @@
 import { useEffect, useMemo, memo, useState } from 'react'
 import { observer } from 'mobx-react-lite'
-import { autorun } from 'mobx'
 import { type MouseEvent } from 'react'
 import rough from 'roughjs'
 import { CanvasStore } from './store'
@@ -48,21 +47,12 @@ export default observer(function App() {
     const [store] = useState(() => new CanvasStore())
 
     useEffect(() => {
-        let hasSelection = false
-        const dispose = autorun(() => {
-            hasSelection = store.hasSelection
-        })
         const onKey = (e: KeyboardEvent) => {
-            if ((e.key === 'Delete' || e.key === 'Backspace') && hasSelection) {
-                e.preventDefault()
-            }
-            store.handleKeyDown(e.key)
+            if (e.key === 'Delete' || e.key === 'Backspace') store.deleteSelected()
+            else if (e.key === 'Escape') store.clearSelection()
         }
         window.addEventListener('keydown', onKey)
-        return () => {
-            dispose()
-            window.removeEventListener('keydown', onKey)
-        }
+        return () => window.removeEventListener('keydown', onKey)
     }, [store])
 
     const pointFromEvent = (e: MouseEvent<SVGSVGElement>) => {
