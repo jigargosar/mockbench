@@ -71,6 +71,10 @@ export class CanvasStore {
     }
 
     handleMouseDown(x: number, y: number) {
+        if (this.drawing !== null) {
+            this.finishDrawing()
+            return
+        }
         const hit = hitTest(this.rects, x, y)
         if (hit) {
             this.selectedId = hit.id
@@ -90,6 +94,10 @@ export class CanvasStore {
     }
 
     handleMouseUp() {
+        this.finishDrawing()
+    }
+
+    private finishDrawing() {
         if (!this.drawing) return
         const b = drawingBounds(this.drawing)
         if (b.w > 2 && b.h > 2) {
