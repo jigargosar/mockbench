@@ -16,8 +16,8 @@ Numbering is continuous across sections.
    [docs](https://mobx.js.org/react-integration.html#always-read-observables-inside-observer-components)
 
 2. Don't wrap `observer(Component)` in `React.memo`
-   Why: `observer` auto-applies `memo`, so the outer wrap adds a redundant shallow compare with no benefit. The inverse — `observer(React.memo(C))` or `observer(observer(C))` — is explicitly rejected by mobx-react at construction.
-   [docs](https://mobx.js.org/react-integration.html#observer-or-reactmemo)
+   Why: `observer` auto-applies `memo`, so wrapping again adds a redundant shallow compare with no benefit.
+   [docs](https://mobx.js.org/react-integration.html#observer-vs-memo)
 
 3. Render lists in dedicated observer components
    Why: React's reconciler has to evaluate every element produced by the list on each collection change. Isolating the `.map()` in its own `observer` keeps unrelated parent changes from forcing that work.
@@ -141,7 +141,7 @@ Numbering is continuous across sections.
 
 33. `observer` must be the innermost decorator when paired with `inject`
     Why: mobx-react docs explicitly require `observer` inside, `inject` outside. Generalized: any HOC wrapping `observer` from the outside risks interfering with its reaction tracking.
-    [docs](https://github.com/mobxjs/mobx/blob/main/packages/mobx-react/README.md)
+    [docs](https://github.com/mobxjs/mobx-react)
 
 ---
 
@@ -169,7 +169,7 @@ Numbering is continuous across sections.
 
 39. Consider `flow` (generators) as an alternative to async/await for MobX actions
     Why: `flow` wraps each `yield` resolution in action scope (no manual `runInAction`) and returns a promise with a `.cancel()` method for cooperative cancellation.
-    [docs](https://mobx.js.org/actions.html#using-flow-instead-of-asyncawait)
+    [docs](https://mobx.js.org/actions.html#using-flow-instead-of-async--await-)
 
 40. Prefer reading computed values from inside a reaction (observer/autorun/reaction)
     Why: Computeds memoize only while an active observer is tracking them. Outside tracking, every read recomputes from scratch. `keepAlive` avoids this but risks memory leaks — scoping reads inside reactions is safer.
@@ -179,9 +179,9 @@ Numbering is continuous across sections.
     Why: `'observed'` requires actions for any mutation to already-observed state. `'always'` additionally requires actions even for observable construction. The default covers real bugs without getting in the way at setup time.
     [docs](https://mobx.js.org/configuration.html#linting-options)
 
-42. Use `isObservableArray()` instead of `Array.isArray()` for observable arrays (only under `useProxies: 'never'`)
-    Why: Under the default proxy mode, observable arrays pass `Array.isArray`. Under `useProxies: 'never'` they don't — reach for `isObservableArray()` to stay correct across both environments.
-    [docs](https://mobx.js.org/configuration.html#limitations-without-proxy-support)
+42. Use `isObservableArray()` for type checks on observable arrays
+    Why: Observable arrays aren't real arrays. Under `useProxies: 'never'` they fail `Array.isArray()`; `isObservableArray()` is the safe check across proxy modes.
+    [docs](https://mobx.js.org/api.html#isobservablearray)
 
 43. Prefer `replace()`, `clear()`, or `remove()` on observable arrays
     Why: MobX-documented helpers: `replace(items)` swaps the whole array, `clear()` empties, `remove(value)` drops a single item by value. Clearer intent than equivalent `splice` calls.
@@ -189,4 +189,4 @@ Numbering is continuous across sections.
 
 44. Reactions shouldn't update other observables — use `computed` instead
     Why: Docs: "Reactions should not compute new data, but only cause effects." If a reaction writes to another observable, you're computing derived data imperatively — chains of these are harder to reason about than declarative `computed` graphs.
-    [docs](https://mobx.js.org/reactions.html#reactions-shouldnt-update-other-observables)
+    [docs](https://mobx.js.org/reactions.html#use-reactions-sparingly)
