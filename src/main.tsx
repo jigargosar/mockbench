@@ -4,12 +4,15 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './global.css'
 
-configure({
-    enforceActions: 'always',
-    computedRequiresReaction: true,
-    reactionRequiresObservable: true,
-    observableRequiresReaction: false,
-})
+if (import.meta.env.DEV) {
+    configure({
+        enforceActions: 'always',
+        computedRequiresReaction: true,
+        reactionRequiresObservable: true,
+        observableRequiresReaction: true,
+        disableErrorBoundaries: true,
+    })
+}
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')
