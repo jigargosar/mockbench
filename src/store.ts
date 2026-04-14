@@ -1,4 +1,4 @@
-import { makeAutoObservable, reaction } from 'mobx'
+import { makeAutoObservable, intercept } from 'mobx'
 
 export type Rect = {
     id: string
@@ -41,12 +41,20 @@ export class CanvasStore {
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true })
-        reaction(
-            () => this.drawing !== null && this.selectedId !== null,
-            (invalid) => {
-                if (invalid) throw new Error('Invalid state: drawing and selection coexist')
-            },
-        )
+        // Dev-only invariant: drawing and selectedId are mutually exclusive —
+        // a user is either drawing a new rect or has one selected, never both.
+        if (import.meta.env.DEV) {
+            intercept(this, (change) => {
+                if (change.type !== 'update') return change
+                if (change.name === 'drawing' && change.newValue !== null && this.selectedId !== null) {
+                    throw new Error('Invalid: drawing set while selection active')
+                }
+                if (change.name === 'selectedId' && change.newValue !== null && this.drawing !== null) {
+                    throw new Error('Invalid: selectedId set while drawing active')
+                }
+                return change
+            })
+        }
     }
 
     get selectedRect(): Rect | undefined {
