@@ -12,63 +12,63 @@ Numbering is continuous across sections.
 ## MobX × React integration
 
 1. Wrap every component that reads observable data with `observer`
-   Why: Without observer, the component won't re-render on observable changes. Silent staleness.
+   Why: Without `observer`, the component doesn't subscribe to the observables it reads — it renders stale data and no error fires.
    [docs](https://mobx.js.org/react-integration.html#always-read-observables-inside-observer-components)
 
 2. Don't wrap `observer(Component)` in `React.memo`
-   Why: observer auto-applies memo — wrapping again is redundant and adds extra comparisons with no benefit.
+   Why: `observer` auto-applies `memo`, so the outer wrap adds a redundant shallow compare with no benefit. The inverse — `observer(React.memo(C))` or `observer(observer(C))` — is explicitly rejected by mobx-react at construction.
    [docs](https://mobx.js.org/react-integration.html#observer-or-reactmemo)
 
 3. Render lists in dedicated observer components
-   Why: Without isolation, parent's other state changes force the entire list to reconcile.
+   Why: React's reconciler has to evaluate every element produced by the list on each collection change. Isolating the `.map()` in its own `observer` keeps unrelated parent changes from forcing that work.
    [docs](https://mobx.js.org/react-optimizations.html#render-lists-in-dedicated-components)
 
 4. Dereference observable values as late as possible
-   Why: Reading rect.x in the parent makes the parent re-render on rect.x change.
+   Why: Pass objects, not fields. Reading `rect.x` in a parent observer re-renders the parent on every `x` change; reading it inside a child observer re-renders only the child.
    [docs](https://mobx.js.org/react-optimizations.html#dereference-values-late)
 
 5. Pass observable objects only to observer-wrapped components — or dereference to plain values first
-   Why: Non-observer children don't subscribe; observable changes won't trigger their re-render.
+   Why: Only `observer` components subscribe to the observables they read. A plain child receiving an observable won't re-render when its fields mutate — either wrap the child in `observer` or pass already-dereferenced primitives.
    [docs](https://mobx.js.org/react-integration.html#dont-pass-observables-into-components-that-arent-observer)
 
 6. Use `<Observer>` wrapper for callback children passed to non-observer libraries
-   Why: A render-prop callback runs in the parent library's render cycle, not the observer's.
+   Why: A render-prop callback runs inside the consuming component's render, not inside the observer that syntactically declared it. Subscriptions land on the wrong component unless the callback body is wrapped in `<Observer>`.
    [docs](https://mobx.js.org/react-integration.html#callback-components-might-require-observer)
 
 7. Use `useLocalObservable` for component-local state
-   Why: Shorthand for `useState(() => observable(initializer(), annotations, { autoBind: true }))`.
+   Why: Shorthand for `useState(() => observable(initializer(), annotations, { autoBind: true }))`. Creates one observable store per component, bound to its instance.
    [docs](https://github.com/mobxjs/mobx/blob/main/packages/mobx-react-lite/README.md#uselocalobservable)
 
 8. Don't capture component props inside `useLocalObservable` initializer
-   Why: Props aren't observable, and the initializer runs once (it's a `useState` lazy init); props read there freeze at mount. Sync via `useEffect`/reaction if they need to drive local state.
-   [docs](https://mobx.js.org/react-integration.html#using-local-observable-state-in-observer-components)
+   Why: The initializer runs once (it's a `useState` lazy init). Prop values read there freeze at mount. If the store needs props, sync them in via `useEffect` after mount.
+   [docs](https://github.com/mobxjs/mobx/blob/main/packages/mobx-react-lite/README.md#uselocalobservable)
 
 9. Don't use array indexes as React keys
-   Why: When items are added/removed/reordered, index keys break React's identity tracking — components lose state and DOM gets recreated.
+   Why: When items shift positions (insert, delete, reorder), index keys make React reuse the wrong component instances — state and DOM map to the wrong items. Generate stable IDs from the data.
    [docs](https://mobx.js.org/react-optimizations.html#dont-use-array-indexes-as-keys)
 
 10. Always pair `addEventListener` with `removeEventListener` in cleanup
-    Why: Without cleanup, listener accumulates on every effect re-run.
+    Why: Each effect re-run adds another listener. Without cleanup, the handler fires N times after N renders.
     [docs](https://react.dev/learn/synchronizing-with-effects#subscribing-to-events)
 
 11. Cleanup must undo exactly what setup did
-    Why: StrictMode's extra setup→cleanup→setup cycle stress-tests that cleanup "mirrors" setup. For `addEventListener`, that means `removeEventListener` with the same handler reference.
+    Why: StrictMode runs setup → cleanup → setup in dev to stress-test that cleanup mirrors setup. For `addEventListener`, that means `removeEventListener` with the same handler reference — otherwise subscriptions leak.
     [docs](https://react.dev/reference/react/useEffect#caveats)
 
 12. Never suppress the exhaustive-deps lint
-    Why: Stale closures captured in suppressed effects fire forever with old values.
+    Why: Suppressing lies to React about what the effect reads. The effect closes over first-render values and fires with stale state forever.
     [docs](https://react.dev/learn/removing-effect-dependencies#dependencies-should-match-the-code)
 
 13. Object/function dependencies in deps array cause needless re-runs
-    Why: Object literals and inline functions get new identity each render. Move static objects out of the component or destructure to primitives.
+    Why: Object and function literals get fresh identity every render, so the effect re-runs even when nothing logically changed. Move static values out of the component or destructure to primitives.
     [docs](https://react.dev/learn/removing-effect-dependencies#does-some-reactive-value-change-unintentionally)
 
 14. Don't derive state in useEffect when it can be computed during render
-    Why: Effect-driven state causes an extra render cycle.
+    Why: If a value can be computed from props/state during render, do it there. Setting it in an effect causes an extra render cycle and may flash the old value first.
     [docs](https://react.dev/learn/you-might-not-need-an-effect#updating-state-based-on-props-or-state)
 
-15. Use `useSyncExternalStore` for browser APIs and external stores
-    Why: Designed for subscribing to external mutable sources (e.g., `navigator.onLine`, stores) without manual `useEffect`/`useState` mirroring.
+15. Use `useSyncExternalStore` when subscribing to non-React sources
+    Why: For browser APIs (e.g., `navigator.onLine`) or external stores, `useSyncExternalStore` is concurrent-safe without manual `useEffect`/`useState` mirroring. Prefer plain `useState`/`useReducer` for React-owned state.
     [docs](https://react.dev/reference/react/useSyncExternalStore)
 
 16. Put interaction-triggered side effects in event handlers, not Effects
@@ -76,117 +76,117 @@ Numbering is continuous across sections.
     [docs](https://react.dev/learn/you-might-not-need-an-effect#sending-a-post-request)
 
 17. Keep StrictMode enabled in dev
-    Why: React runs an extra setup+cleanup cycle before the first real setup. If your effect breaks under double-invocation, the cleanup is incomplete.
-    [docs](https://react.dev/reference/react/useEffect#caveats)
+    Why: StrictMode runs an extra setup → cleanup → setup cycle before the first real setup. Any effect that breaks under this cycle has incomplete cleanup — catching it in dev is cheaper than in prod.
+    [docs](https://react.dev/reference/react/StrictMode)
 
 18. Pass a function to `useState` for expensive initialization, not the result
-    Why: `useState(createStore())` runs createStore on every render. `useState(createStore)` runs it once.
+    Why: `useState(createStore())` runs `createStore` on every render. `useState(createStore)` runs it once.
     [docs](https://react.dev/reference/react/useState#avoiding-recreating-the-initial-state)
 
 19. Initializer function must be pure (StrictMode calls it twice)
-    Why: StrictMode invokes initializers twice in dev to detect impurities.
+    Why: StrictMode calls initializers twice in dev to catch impurities. Mutations, ID generation, and logging inside the initializer will run twice — keep it pure.
     [docs](https://react.dev/reference/react/useState#caveats)
 
 20. Use `useRef` for values that should NOT trigger re-renders
-    Why: Mutating ref.current doesn't re-render. Right for timer IDs, DOM nodes, drag-state.
+    Why: Mutating `ref.current` doesn't re-render. Right for timer IDs, DOM nodes, drag-state — things the render output doesn't depend on.
     [docs](https://react.dev/learn/referencing-values-with-refs)
 
 21. Don't read or write `ref.current` during render (except lazy init)
-    Why: Render must be pure. Reading/writing during render makes component output non-deterministic.
+    Why: Render must be pure. Reading/writing `ref.current` during render makes output depend on render order — breaks StrictMode and concurrent rendering.
     [docs](https://react.dev/reference/react/useRef#caveats)
 
-22. `useMemo` and `useCallback` earn their keep in three cases
-    Why: (a) slow calculations with stable deps, (b) props to `memo`-wrapped children, (c) values used as Hook dependencies. Elsewhere they add ceremony without meaningful benefit.
+22. `useMemo` has three valid cases; `useCallback` has two
+    Why: `useMemo` helps when (a) a calculation is measurably slow with stable deps, (b) the value is a prop to a `memo`-wrapped child, or (c) it feeds another Hook's deps. `useCallback` applies only to (b) and (c) — it caches a function, not a computation. Elsewhere both add ceremony without benefit.
     [docs](https://react.dev/reference/react/useMemo#should-you-add-usememo-everywhere)
 
 23. Don't create new objects/arrays/functions as props to memo'd components
-    Why: React.memo uses Object.is shallow compare. Inline literals get new identity each render — memo always sees "different."
+    Why: `React.memo` uses `Object.is` shallow compare. Inline literals get new identity every render — memo always sees "different" and never bails out.
     [docs](https://react.dev/reference/react/memo#minimizing-props-changes)
 
 24. Custom `arePropsEqual` must compare every prop, including functions
-    Why: Functions close over parent props/state; returning true when they differ makes handlers see stale props/state.
+    Why: Functions close over parent props/state. Returning `true` when they differ makes handlers "see" stale props/state from a previous render.
     [docs](https://react.dev/reference/react/memo#specifying-a-custom-comparison-function)
 
 25. Keys must be stable, unique among siblings, derived from data
-    Why: Index keys / Math.random keys cause React to recreate DOM and lose user input.
+    Why: Index keys or `Math.random()` keys cause React to recreate DOM and lose user input when the list shifts. Use a stable ID from the data.
     [docs](https://react.dev/learn/rendering-lists#rules-of-keys)
 
 26. To reset a component's state, change its `key`
-    Why: React preserves state by position+key. Same position + new key = teardown + fresh mount.
+    Why: React preserves state by position + key. Same position + new key = teardown + fresh mount.
     [docs](https://react.dev/learn/preserving-and-resetting-state#resetting-state-with-a-key)
 
 27. Keep component bodies pure
-    Why: StrictMode double-invokes component functions in development to detect impurity. Side effects during render run twice.
+    Why: StrictMode calls component functions twice in dev to detect impurity. Any side effect in the body — mutation, logging, API call — runs multiple times.
     [docs](https://react.dev/learn/keeping-components-pure)
 
 28. Store observable instances via lazy `useState(() => new Store())`, never `useState(new Store())`
-    Why: Non-lazy `new Store()` runs on every render, constructing a fresh instance each time. Lazy init runs once.
-    [docs](https://mobx.js.org/react-integration.html#using-local-observable-state-in-observer-components)
+    Why: Non-lazy `new Store()` constructs a fresh instance every render — local state is lost and `makeAutoObservable` re-runs, which can produce "Maximum update depth" loops. Lazy init runs once.
+    [docs](https://react.dev/reference/react/useState#avoiding-recreating-the-initial-state)
 
-29. Keep MobX as the source of truth — don't mirror observable values into `useState`
-    Why: `useState`/`useRef` should hold the stable observable instance, not copies of its values. Mirroring desyncs the two stores and forces effect chains to keep them aligned.
-    [docs](https://mobx.js.org/react-integration.html#using-local-observable-state-in-observer-components)
+29. Keep MobX as the source of truth — don't mirror observable values into `useState` [project convention]
+    Why: `useState`/`useRef` may hold the observable instance itself, but not copies of its values. Mirroring forks the truth: two stores drift apart and need effect chains to reconcile.
+    [related](https://mobx.js.org/react-integration.html#using-local-observable-state-in-observer-components)
 
 30. Wrap event handlers in `action(...)` if they do multiple mutations
-    Why: The outermost transaction batches updates. Multiple sequential actions = multiple commits.
+    Why: Only the outermost action boundary batches updates into one transaction. A handler calling two already-annotated actions produces two transactions (two reaction firings) unless the handler itself is wrapped.
     [docs](https://mobx.js.org/actions.html#wrapping-functions-using-action)
 
 31. Create `autorun`/`reaction` once inside `useEffect`, never in event handlers
-    Why: Each call to `autorun` creates a new reaction. Calling it in a handler spawns undisposed reactions = leak. `useEffect` gives you a cleanup hook to dispose.
+    Why: Each call creates a new reaction. Calling from a handler spawns an undisposed subscription on every click — a guaranteed leak. `useEffect` gives you a cleanup hook to dispose.
     [docs](https://mobx.js.org/reactions.html#always-dispose-of-reactions)
 
 32. Don't destructure observables outside an observer's render
-    Why: Destructuring reads the property eagerly, outside MobX's tracking — the observer won't subscribe to the field.
+    Why: Destructuring reads the property eagerly at the destructure site. If that site isn't inside an `observer`'s render (e.g., a handler, an effect body, module scope), MobX records no subscription and the component never re-renders for that field.
     [docs](https://mobx.js.org/react-integration.html#always-read-observables-inside-observer-components)
 
-33. `observer` must be the innermost (first-applied) HOC in a chain
-    Why: If another HOC wraps the component first, observer's reaction might do nothing at all.
-    [docs](https://mobx.js.org/react-integration.html)
+33. `observer` must be the innermost decorator when paired with `inject`
+    Why: mobx-react docs explicitly require `observer` inside, `inject` outside. Generalized: any HOC wrapping `observer` from the outside risks interfering with its reaction tracking.
+    [docs](https://github.com/mobxjs/mobx/blob/main/packages/mobx-react/README.md)
 
 ---
 
 ## Pure MobX
 
 34. Use `makeAutoObservable(this)` in class constructors
-    Why: Auto-infers fields as observable, getters as computed, setters as action, methods as autoAction, generators as flow.
+    Why: Auto-infers fields → `observable`, getters → `computed`, setters → `action`, methods → `autoAction`, generators → `flow`. Skips hand-annotating each member.
     [docs](https://mobx.js.org/observable-state.html#makeautoobservable)
 
 35. Never subclass a class that uses `makeAutoObservable`
-    Why: makeAutoObservable cannot be used on classes with super or subclasses.
+    Why: `makeAutoObservable` cannot be used on classes with `super` or subclasses. Use `makeObservable` + explicit annotations if inheritance is required.
     [docs](https://mobx.js.org/observable-state.html#limitations)
 
 36. Call `make(Auto)Observable` unconditionally and after fields are initialized
-    Why: Unconditional calls let MobX cache inference across instances; conditional or pre-init calls produce incorrect annotations.
+    Why: Unconditional calls let MobX cache inference across instances of the same class. Conditional or pre-init calls produce incorrect annotations that persist silently.
     [docs](https://mobx.js.org/observable-state.html#limitations)
 
 37. Always dispose `autorun`/`reaction`/`when` returns
-    Why: Reactions hold references to observables they watch — undisposed = memory leak.
+    Why: Reactions hold strong references to the observables they watch. If you never call the disposer, the reaction (and everything it captures) can't be garbage-collected.
     [docs](https://mobx.js.org/reactions.html#always-dispose-of-reactions)
 
 38. Use `runInAction` after every `await` in async code
-    Why: Action wrapping doesn't extend across await ticks.
+    Why: An `action` wrapper only covers the synchronous part. After an `await`, you're back in plain tick scope — mutations there must be re-wrapped in `runInAction`.
     [docs](https://mobx.js.org/actions.html#asynchronous-actions)
 
 39. Consider `flow` (generators) as an alternative to async/await for MobX actions
-    Why: flow auto-wraps each yield (no runInAction needed) and supports cancellation via `.cancel()`.
+    Why: `flow` wraps each `yield` resolution in action scope (no manual `runInAction`) and returns a promise with a `.cancel()` method for cooperative cancellation.
     [docs](https://mobx.js.org/actions.html#using-flow-instead-of-asyncawait)
 
 40. Prefer reading computed values from inside a reaction (observer/autorun/reaction)
-    Why: Computeds memoize only while an active observer tracks them; outside one, each read recomputes. Use `keepAlive` to memoize standalone reads.
+    Why: Computeds memoize only while an active observer is tracking them. Outside tracking, every read recomputes from scratch. `keepAlive` avoids this but risks memory leaks — scoping reads inside reactions is safer.
     [docs](https://mobx.js.org/computeds.html#tips)
 
 41. Use `enforceActions: 'observed'` (the default)
-    Why: Strict enough to catch mutations to observed state, loose enough to allow construction.
+    Why: `'observed'` requires actions for any mutation to already-observed state. `'always'` additionally requires actions even for observable construction. The default covers real bugs without getting in the way at setup time.
     [docs](https://mobx.js.org/configuration.html#linting-options)
 
-42. Use `isObservableArray()` instead of `Array.isArray()` for observable arrays
-    Why: With `useProxies: 'never'`, observable arrays fail `Array.isArray` because they aren't real arrays.
+42. Use `isObservableArray()` instead of `Array.isArray()` for observable arrays (only under `useProxies: 'never'`)
+    Why: Under the default proxy mode, observable arrays pass `Array.isArray`. Under `useProxies: 'never'` they don't — reach for `isObservableArray()` to stay correct across both environments.
     [docs](https://mobx.js.org/configuration.html#limitations-without-proxy-support)
 
 43. Prefer `replace()`, `clear()`, or `remove()` on observable arrays
-    Why: MobX-documented helpers that emit a single change notification.
+    Why: MobX-documented helpers: `replace(items)` swaps the whole array, `clear()` empties, `remove(value)` drops a single item by value. Clearer intent than equivalent `splice` calls.
     [docs](https://mobx.js.org/api.html#observablearray)
 
 44. Reactions shouldn't update other observables — use `computed` instead
-    Why: Reaction-driven mutations create derivation chains that can loop or fire reactions out of order.
+    Why: Docs: "Reactions should not compute new data, but only cause effects." If a reaction writes to another observable, you're computing derived data imperatively — chains of these are harder to reason about than declarative `computed` graphs.
     [docs](https://mobx.js.org/reactions.html#reactions-shouldnt-update-other-observables)
