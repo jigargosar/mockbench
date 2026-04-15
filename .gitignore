@@ -24,3 +24,4 @@ dist
 elm-stuff
 
 /.claude/scheduled_tasks.lock
+docs/mobx/
