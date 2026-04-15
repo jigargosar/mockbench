@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { type MouseEvent } from 'react'
 import rough from 'roughjs'
-import { CanvasStore, type Rect } from './store'
+import { CanvasStore, type MouseInput, type Rect } from './store'
 
 const generator = rough.generator()
 
@@ -58,26 +58,23 @@ export default function App() {
     const [store] = useState(() => new CanvasStore())
 
     useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Delete' || e.key === 'Backspace') store.deleteSelected()
-            else if (e.key === 'Escape') store.clearSelection()
-        }
+        const onKey = (e: KeyboardEvent) => store.handleKeyDown({ key: e.key })
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [store])
 
-    const pointFromEvent = (e: MouseEvent<SVGSVGElement>) => {
+    const toMouseInput = (e: MouseEvent<SVGSVGElement>): MouseInput => {
         const box = e.currentTarget.getBoundingClientRect()
-        return { x: e.clientX - box.left, y: e.clientY - box.top }
+        return { x: e.clientX - box.left, y: e.clientY - box.top, button: e.button }
     }
 
     return (
         <div className="h-screen w-screen overflow-hidden bg-white">
             <svg
                 className="h-full w-full"
-                onMouseDown={e => { const { x, y } = pointFromEvent(e); store.handleMouseDown(x, y) }}
-                onMouseMove={e => { const { x, y } = pointFromEvent(e); store.handleMouseMove(x, y) }}
-                onMouseUp={() => store.handleMouseUp()}
+                onMouseDown={e => store.handleMouseDown(toMouseInput(e))}
+                onMouseMove={e => store.handleMouseMove(toMouseInput(e))}
+                onMouseUp={e => store.handleMouseUp(toMouseInput(e))}
             >
                 <RectsView store={store} />
                 <Preview store={store} />

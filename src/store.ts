@@ -9,6 +9,16 @@ export type Rect = {
     seed: number
 }
 
+export type MouseInput = {
+    x: number
+    y: number
+    button: number
+}
+
+export type KeyboardInput = {
+    key: string
+}
+
 type Drawing = {
     x0: number
     y0: number
@@ -70,7 +80,8 @@ export class CanvasStore {
         return { ...b, seed: this.drawing.seed }
     }
 
-    handleMouseDown(x: number, y: number) {
+    handleMouseDown({ x, y, button }: MouseInput) {
+        if (button !== 0) return
         if (this.drawing !== null) {
             this.finishDrawing()
             return
@@ -87,14 +98,24 @@ export class CanvasStore {
         }
     }
 
-    handleMouseMove(x: number, y: number) {
+    handleMouseMove({ x, y }: MouseInput) {
         if (!this.drawing) return
         this.drawing.x1 = x
         this.drawing.y1 = y
     }
 
-    handleMouseUp() {
+    handleMouseUp(_: MouseInput) {
         this.finishDrawing()
+    }
+
+    handleKeyDown({ key }: KeyboardInput) {
+        // Mac uses Backspace as the delete key; Windows/Linux use Delete. Accept both.
+        if (key === 'Delete' || key === 'Backspace') this.deleteSelected()
+        // Escape cancels the current gesture: drop an in-progress drag, otherwise clear selection.
+        else if (key === 'Escape') {
+            if (this.drawing !== null) this.drawing = null
+            else this.selectedId = null
+        }
     }
 
     private finishDrawing() {
@@ -113,7 +134,4 @@ export class CanvasStore {
         this.selectedId = null
     }
 
-    clearSelection() {
-        this.selectedId = null
-    }
 }
