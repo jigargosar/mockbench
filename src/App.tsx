@@ -10,8 +10,9 @@ function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: n
     const paths = generator.toPaths(generator.rectangle(x, y, w, h, { seed }))
     return (
         <g>
-            {paths.map((p, i) => (
-                <path key={i} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
+            {paths.map((p) => (
+                // Path `d` is stable per rect+seed and distinct across outline/fill; safe as key.
+                <path key={p.d} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
             ))}
         </g>
     )

@@ -14,9 +14,9 @@
 
 12. [DONE] `App` wrapped in `observer`. Reads no observables today, but the first direct read added to `App` would throw in DEV (via `observableRequiresReaction`) and silently return stale data in PROD. Wrapping is a cheap defense against a known dev/prod-asymmetric failure mode — YAGNI is for speculative features, not landmines.
 
-13. [PENDING] `rects` field is public — breaks the "encapsulate store" invariant. `src/store.ts:38`. Commit `f0b905b` ("Encapsulate store — private state, handle* public API") made `drawing` and `selectedId` private but left `rects` public. Any caller can `store.rects.push(...)`, bypassing action enforcement and the invariant intercept. verified.
+13. [DONE] `rects` field public — addressed at the discipline level: global CLAUDE.md now states "models own their state and derivations; external code should treat them as readonly." Type-level enforcement can't fully prevent element-level mutation, so the fix is a standing rule, not code.
 
-14. [PENDING] `key={i}` for rough.js path list. `src/App.tsx:13`. `generator.toPaths(...)` returns a variable-length array. Index keys are forbidden by rule 9/25. If roughjs ever returns a different path count for the same rect (upgrade, option change), React reuses the wrong `<path>` node for a frame. verified.
+14. [DONE] `key={i}` for rough.js path list replaced with `key={p.d}` — stable per rect+seed, distinct across outline/fill paths.
 
 15. [PENDING] Seed space is only 10,000 values; seed=0 is special-cased by roughjs. `src/store.ts:74`. `Math.floor(Math.random() * 10000)`. At ~30 rects the birthday-paradox collision probability is ~4%; collisions produce visually identical stroke jitter. If the result is exactly 0, roughjs treats seed=0 as "generate a new random seed each call" — strokes jitter on every re-render. verified (10k space); looks-right (seed=0 behavior).
 
