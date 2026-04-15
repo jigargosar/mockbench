@@ -8,8 +8,6 @@
 
 5. [DONE — b7c6d4e] Invariant guarded by the reaction is already maintained by the actions. The reaction is gone; the replacement intercept is a dev-only assertion (per CLAUDE.md scope implies invariants will multiply as the app grows, a standing tripwire is worth keeping).
 
-7. [PENDING] `window` keydown listener steals Delete / Backspace / Escape from inputs. `src/App.tsx:60-67`. No `event.target` check. The app has no text inputs today, but the workspace scope in `CLAUDE.md` implies label editing, toolbar search, command palette. The first `<input>` added will have Delete/Backspace both edit text and delete the selected rect. verified. (`handleKeyDown` now lives in the store, but the view still forwards every keydown — target guard has to land in the App-side listener before forwarding.)
-
 8. [DONE — 08b6126] Escape mid-draw doesn't cancel the draw. `handleKeyDown` Escape branch now drops `drawing` if non-null, otherwise clears `selectedId`.
 
 10. [DEFERRED] No `touch-action` or `user-select: none`. `src/App.tsx:74-85`, `src/global.css:1`. Touch devices scroll instead of drawing (mouse-only handlers + missing `touch-action: none`). Desktop click-drag can select adjacent text mid-stroke. verified. Revisit when pan/zoom / infinite canvas lands — that's when scroll behavior becomes relevant.

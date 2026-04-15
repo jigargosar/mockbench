@@ -5,3 +5,7 @@
 ## `crypto.randomUUID()` throws on non-secure contexts
 
 `finishDrawing` calls `crypto.randomUUID()`, undefined on plain HTTP origins (except `localhost`/`127.0.0.1`). Accepted: deployment is HTTPS, dev uses `localhost`. Swap to `uuid`/`nanoid` when an actual non-secure-context access path is needed.
+
+## `window` keydown handler fires inside inputs
+
+App has no text inputs today. When the first `<input>` / `<textarea>` / contenteditable is added, pressing Delete/Backspace inside it will both edit text AND delete the selected rect. Visible on first use — will fix then by adding a target guard in App.tsx before forwarding to `store.handleKeyDown`.
