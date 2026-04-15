@@ -8,8 +8,6 @@
 
 5. [DONE — b7c6d4e] Invariant guarded by the reaction is already maintained by the actions. The reaction is gone; the replacement intercept is a dev-only assertion (per CLAUDE.md scope implies invariants will multiply as the app grows, a standing tripwire is worth keeping).
 
-6. [PENDING] `SelectionBorder` extends 4px past the rect, but `hitTest` uses rect bounds only. `src/App.tsx:40-55, 78`, `src/store.ts:29-35`. Border is drawn at `sel.x - 4, sel.y - 4, sel.w + 8, sel.h + 8`. Clicking on the visible dashed border (in the 4px ring outside the rect) misses `hitTest`, so `handleMouseDown` clears the selection and starts a new draw. The visual cue is a landmine — clicking it does the opposite of what it signals. verified.
-
 7. [PENDING] `window` keydown listener steals Delete / Backspace / Escape from inputs. `src/App.tsx:60-67`. No `event.target` check. The app has no text inputs today, but the workspace scope in `CLAUDE.md` implies label editing, toolbar search, command palette. The first `<input>` added will have Delete/Backspace both edit text and delete the selected rect. verified. (`handleKeyDown` now lives in the store, but the view still forwards every keydown — target guard has to land in the App-side listener before forwarding.)
 
 8. [DONE — 08b6126] Escape mid-draw doesn't cancel the draw. `handleKeyDown` Escape branch now drops `drawing` if non-null, otherwise clears `selectedId`.
