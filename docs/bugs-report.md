@@ -12,8 +12,6 @@
 
 8. [DONE — 08b6126] Escape mid-draw doesn't cancel the draw. `handleKeyDown` Escape branch now drops `drawing` if non-null, otherwise clears `selectedId`.
 
-9. [PENDING] `crypto.randomUUID()` is undefined on non-secure contexts and older Safari. `src/store.ts:88`. Absent on plain `http://` origins (except localhost) and Safari < 15.4. The first `mouseup` that creates a rect throws `TypeError`. Landmine for any non-HTTPS staging / `file://` demo / corporate-HTTP deploy. verified.
-
 10. [DEFERRED] No `touch-action` or `user-select: none`. `src/App.tsx:74-85`, `src/global.css:1`. Touch devices scroll instead of drawing (mouse-only handlers + missing `touch-action: none`). Desktop click-drag can select adjacent text mid-stroke. verified. Revisit when pan/zoom / infinite canvas lands — that's when scroll behavior becomes relevant.
 
 11. [PENDING] `enforceActions: 'always'` contradicts project rule 41. `src/main.tsx:9`. Rule 41 prescribes `'observed'`. Code uses `'always'` with no justifying comment. Trips the first time anyone constructs observable state outside an action. verified.
