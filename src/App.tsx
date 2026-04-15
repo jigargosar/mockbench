@@ -54,7 +54,7 @@ const SelectionBorder = observer(function SelectionBorder({ store }: { store: Ca
     )
 })
 
-export default function App() {
+export default observer(function App() {
     const [store] = useState(() => new CanvasStore())
 
     useEffect(() => {
@@ -82,4 +82,4 @@ export default function App() {
             </svg>
         </div>
     )
-}
+})
