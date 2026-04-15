@@ -175,9 +175,9 @@ Numbering is continuous across sections.
     Why: Computeds memoize only while an active observer is tracking them. Outside tracking, every read recomputes from scratch. `keepAlive` avoids this but risks memory leaks — scoping reads inside reactions is safer.
     [docs](https://mobx.js.org/computeds.html#tips)
 
-41. Use `enforceActions: 'observed'` (the default)
-    Why: `'observed'` requires actions for any mutation to already-observed state. `'always'` additionally requires actions even for observable construction. The default covers real bugs without getting in the way at setup time.
-    [docs](https://mobx.js.org/configuration.html#linting-options)
+41. Use `enforceActions: 'always'` — the strictest, goal-aligned mode
+    Why: Per docs, `'always'` "captures this [the feature's goal] best" since state should always be created from event handlers and event handlers should be wrapped. The default `'observed'` is looser — it lets non-action mutations of unobserved state pass silently, which becomes a latent bug only when something later subscribes. `'always'` rejects such mutations upfront. Awkward only for unit tests, where `runInAction` can wrap lazy creation when needed.
+    [docs](https://mobx.js.org/configuration.html#enforceactions)
 
 42. Use `isObservableArray()` for type checks on observable arrays
     Why: Observable arrays aren't real arrays. Under `useProxies: 'never'` they fail `Array.isArray()`; `isObservableArray()` is the safe check across proxy modes.

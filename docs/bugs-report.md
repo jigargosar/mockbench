@@ -12,8 +12,6 @@
 
 10. [DEFERRED] No `touch-action` or `user-select: none`. `src/App.tsx:74-85`, `src/global.css:1`. Touch devices scroll instead of drawing (mouse-only handlers + missing `touch-action: none`). Desktop click-drag can select adjacent text mid-stroke. verified. Revisit when pan/zoom / infinite canvas lands — that's when scroll behavior becomes relevant.
 
-11. [PENDING] `enforceActions: 'always'` contradicts project rule 41. `src/main.tsx:9`. Rule 41 prescribes `'observed'`. Code uses `'always'` with no justifying comment. Trips the first time anyone constructs observable state outside an action. verified.
-
 12. [DONE] `App` wrapped in `observer`. Reads no observables today, but the first direct read added to `App` would throw in DEV (via `observableRequiresReaction`) and silently return stale data in PROD. Wrapping is a cheap defense against a known dev/prod-asymmetric failure mode — YAGNI is for speculative features, not landmines.
 
 13. [PENDING] `rects` field is public — breaks the "encapsulate store" invariant. `src/store.ts:38`. Commit `f0b905b` ("Encapsulate store — private state, handle* public API") made `drawing` and `selectedId` private but left `rects` public. Any caller can `store.rects.push(...)`, bypassing action enforcement and the invariant intercept. verified.
