@@ -9,3 +9,7 @@
 ## `window` keydown handler fires inside inputs
 
 App has no text inputs today. When the first `<input>` / `<textarea>` / contenteditable is added, pressing Delete/Backspace inside it will both edit text AND delete the selected rect. Visible on first use — will fix then by adding a target guard in App.tsx before forwarding to `store.handleKeyDown`.
+
+## `previewRect` doesn't guard against NaN coords
+
+Theoretical concern only. No realistic path produces NaN: `e.clientX/Y` is always numeric on real events, and `getBoundingClientRect()` returns zeros (not NaN) on detached / `display: none` elements. Skipped.

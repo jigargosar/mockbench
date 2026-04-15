@@ -44,6 +44,11 @@ function hitTest(rects: Rect[], x: number, y: number): Rect | undefined {
     return undefined
 }
 
+// rough.js treats seed=0 as "re-seed on every call", so we exclude it via `|| 1`.
+function randomSeed(): number {
+    return Math.floor(Math.random() * 2 ** 31) || 1
+}
+
 export class CanvasStore {
     rects: Rect[] = []
     private drawing: Drawing | null = null
@@ -94,7 +99,7 @@ export class CanvasStore {
         this.selectedId = null
         this.drawing = {
             x0: x, y0: y, x1: x, y1: y,
-            seed: Math.floor(Math.random() * 10000),
+            seed: randomSeed(),
         }
     }
 

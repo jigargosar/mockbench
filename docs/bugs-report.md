@@ -18,9 +18,7 @@
 
 14. [DONE] `key={i}` for rough.js path list replaced with `key={p.d}` — stable per rect+seed, distinct across outline/fill paths.
 
-15. [PENDING] Seed space is only 10,000 values; seed=0 is special-cased by roughjs. `src/store.ts:74`. `Math.floor(Math.random() * 10000)`. At ~30 rects the birthday-paradox collision probability is ~4%; collisions produce visually identical stroke jitter. If the result is exactly 0, roughjs treats seed=0 as "generate a new random seed each call" — strokes jitter on every re-render. verified (10k space); looks-right (seed=0 behavior).
-
-16. [PENDING] `previewRect` guard allows `NaN` coordinates through. `src/store.ts:58-63`. Guard is `b.w <= 0 || b.h <= 0`. `NaN <= 0` is `false`, so if `x` or `y` is ever `NaN` (e.g., `getBoundingClientRect()` returns zeros during a layout race on mount), the computed returns a rect with `NaN` fields, which roughjs passes through to a broken SVG path silently. sure.
+15. [DONE] Seed generator replaced with `randomSeed()` — ~2 billion distinct values (`Math.floor(Math.random() * 2 ** 31) || 1`), `|| 1` excludes rough.js's seed=0 re-seed special case.
 
 17. [PENDING] `toMouseInput` uses `getBoundingClientRect` with no handling of SVG `viewBox` or CSS transforms. `src/App.tsx:69-72`. Works today because the SVG has no `viewBox` and no ancestor transforms. The moment either is added (zoom, pan, responsive scaling), client-pixel coords no longer match SVG user-space coords, and every mouse position is offset by the `viewBox / box.width` ratio. looks-right.
 
