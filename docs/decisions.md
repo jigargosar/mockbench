@@ -13,3 +13,7 @@ App has no text inputs today. When the first `<input>` / `<textarea>` / contente
 ## `previewRect` doesn't guard against NaN coords
 
 Theoretical concern only. No realistic path produces NaN: `e.clientX/Y` is always numeric on real events, and `getBoundingClientRect()` returns zeros (not NaN) on detached / `display: none` elements. Skipped.
+
+## `toMouseInput` doesn't handle SVG viewBox / CSS transforms
+
+Works today because the SVG has no `viewBox` and no ancestor transforms. Will offset every click when pan/zoom / infinite canvas lands — revisit with that feature using `getScreenCTM().inverse()` to map client coords to SVG user-space.

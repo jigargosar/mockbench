@@ -20,14 +20,9 @@
 
 15. [DONE] Seed generator replaced with `randomSeed()` — ~2 billion distinct values (`Math.floor(Math.random() * 2 ** 31) || 1`), `|| 1` excludes rough.js's seed=0 re-seed special case.
 
-17. [PENDING] `toMouseInput` uses `getBoundingClientRect` with no handling of SVG `viewBox` or CSS transforms. `src/App.tsx:69-72`. Works today because the SVG has no `viewBox` and no ancestor transforms. The moment either is added (zoom, pan, responsive scaling), client-pixel coords no longer match SVG user-space coords, and every mouse position is offset by the `viewBox / box.width` ratio. looks-right.
-
-18. [PENDING] Three overlapping shapes for the same conceptual rect. `src/store.ts:3-10, 20-27, 58`, `src/App.tsx:9`. `Rect { id, x, y, w, h, seed }`, `drawingBounds` return `{ x, y, w, h }`, `previewRect` return `{ x, y, w, h, seed }`, `RoughRect` props `{ x, y, w, h, seed }`. Each is declared ad-hoc; none reference each other. Adding a field means editing four sites, easy to miss one. looks-right.
-
 19. [PARTIAL — 08b6126] `pointFromEvent` defined inside `App` but depends on nothing App-specific. Renamed to `toMouseInput` and returns the shared `MouseInput` type from the store — output is no longer ad-hoc. Still physically defined inside the App function; move-to-util is pending if we ever need it from elsewhere.
 
 20. [PARTIAL — b7c6d4e / 08b6126] Zero comments in either file. Added: invariant-intercept purpose (`store.ts`), Delete/Backspace platform reason, and Escape-cancel semantics (`store.ts handleKeyDown`). Still magic: the `w > 2 && h > 2` threshold in `finishDrawing` and the 4px inflation in `SelectionBorder`. Seed `10000` has been noted in #15.
 
 21. [DONE — 08b6126] Three inline mouse handlers had near-identical shape but weren't symmetric. All three now uniform: `store.handleXxx(toMouseInput(e))`. Store-side handlers all take `MouseInput`.
 
-22. [PENDING] `RoughRect` takes five positional-in-type props that are always dereferenced from the same shape. `src/App.tsx:9, 21, 37`. Any new rect attribute has to be added in three places: `RoughRect` type, `RectItem`'s dereference, `Preview`'s dereference. After the list-extraction refactor this is already down from four sites to three; one more step (pass `rect` or `preview` as a single prop) would bring it to one. Design pressure, not a bug. verified.
