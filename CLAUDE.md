@@ -6,6 +6,8 @@ A wireframe is a document of intent, not a visual asset. The tool should be as f
 
 The design direction is progressive disclosure: the first-time surface stays small, and depth reveals itself as users reach for it. This principle governs feature delivery as much as UX — ship the minimum, add depth only as real need appears.
 
+A wireframing tool is a thinking tool with deliberate constraints; a design tool is a production tool with deliberate capabilities. MockBench is the former. Its core value is semantic UI widgets (buttons, dropdowns, data grids — not just rectangles), deliberate low fidelity that prevents premature visual discussions, and speed-of-thought screen layout. Features that invite polish (gradients, shadows, pen tools, pixel-perfect positioning) are out of scope — they undermine the forcing function that makes wireframes useful.
+
 Scope: a full workspace, not a minimal utility.
 
 ## Library docs
