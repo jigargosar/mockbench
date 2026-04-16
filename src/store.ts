@@ -1,4 +1,6 @@
-import { makeAutoObservable, intercept } from 'mobx'
+import { makeAutoObservable } from 'mobx'
+
+// ── Rect model ─────────────────────────────────
 
 export type Rect = {
     id: string
@@ -9,15 +11,15 @@ export type Rect = {
     seed: number
 }
 
-export type MouseInput = {
-    x: number
-    y: number
-    button: number
+function hitTest(rects: readonly Rect[], x: number, y: number): Rect | undefined {
+    for (let i = rects.length - 1; i >= 0; i--) {
+        const r = rects[i]
+        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r
+    }
+    return undefined
 }
 
-export type KeyboardInput = {
-    key: string
-}
+// ── Drawing model ──────────────────────────────
 
 type Drawing = {
     x0: number
@@ -36,77 +38,75 @@ function drawingBounds(d: Drawing) {
     }
 }
 
-function hitTest(rects: Rect[], x: number, y: number): Rect | undefined {
-    for (let i = rects.length - 1; i >= 0; i--) {
-        const r = rects[i]
-        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r
-    }
-    return undefined
-}
-
 // rough.js treats seed=0 as "re-seed on every call", so we exclude it via `|| 1`.
 function randomSeed(): number {
     return Math.floor(Math.random() * 2 ** 31) || 1
 }
 
+function createDrawing(x: number, y: number): Drawing {
+    return { x0: x, y0: y, x1: x, y1: y, seed: randomSeed() }
+}
+
+// ── Input types ────────────────────────────────
+
+export type MouseInput = {
+    x: number
+    y: number
+    button: number
+}
+
+export type KeyboardInput = {
+    key: string
+}
+
+// ── Interaction mode ───────────────────────────
+
+type Mode =
+    | { kind: 'idle' }
+    | { kind: 'drawing'; drawing: Drawing }
+    | { kind: 'selected'; selectedId: string }
+
+// ── Store ──────────────────────────────────────
+
 export class CanvasStore {
     rects: Rect[] = []
-    private drawing: Drawing | null = null
-    private selectedId: string | null = null
+    private mode: Mode = { kind: 'idle' }
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true })
-        // Dev-only invariant: drawing and selectedId are mutually exclusive —
-        // a user is either drawing a new rect or has one selected, never both.
-        if (import.meta.env.DEV) {
-            intercept(this, (change) => {
-                if (change.type !== 'update') return change
-                if (change.name === 'drawing' && change.newValue !== null && this.selectedId !== null) {
-                    throw new Error('Invalid: drawing set while selection active')
-                }
-                if (change.name === 'selectedId' && change.newValue !== null && this.drawing !== null) {
-                    throw new Error('Invalid: selectedId set while drawing active')
-                }
-                return change
-            })
-        }
     }
 
     get selectedRect(): Rect | undefined {
-        return this.selectedId
-            ? this.rects.find(r => r.id === this.selectedId)
-            : undefined
+        if (this.mode.kind !== 'selected') return undefined
+        const { selectedId } = this.mode
+        return this.rects.find(r => r.id === selectedId)
     }
 
     get previewRect(): { x: number; y: number; w: number; h: number; seed: number } | null {
-        if (!this.drawing) return null
-        const b = drawingBounds(this.drawing)
+        if (this.mode.kind !== 'drawing') return null
+        const b = drawingBounds(this.mode.drawing)
         if (b.w <= 0 || b.h <= 0) return null
-        return { ...b, seed: this.drawing.seed }
+        return { ...b, seed: this.mode.drawing.seed }
     }
 
     handleMouseDown({ x, y, button }: MouseInput) {
         if (button !== 0) return
-        if (this.drawing !== null) {
+        if (this.mode.kind === 'drawing') {
             this.finishDrawing()
             return
         }
         const hit = hitTest(this.rects, x, y)
         if (hit) {
-            this.selectedId = hit.id
+            this.mode = { kind: 'selected', selectedId: hit.id }
             return
         }
-        this.selectedId = null
-        this.drawing = {
-            x0: x, y0: y, x1: x, y1: y,
-            seed: randomSeed(),
-        }
+        this.mode = { kind: 'drawing', drawing: createDrawing(x, y) }
     }
 
     handleMouseMove({ x, y }: MouseInput) {
-        if (!this.drawing) return
-        this.drawing.x1 = x
-        this.drawing.y1 = y
+        if (this.mode.kind !== 'drawing') return
+        this.mode.drawing.x1 = x
+        this.mode.drawing.y1 = y
     }
 
     handleMouseUp(_: MouseInput) {
@@ -116,27 +116,24 @@ export class CanvasStore {
     handleKeyDown({ key }: KeyboardInput) {
         // Mac uses Backspace as the delete key; Windows/Linux use Delete. Accept both.
         if (key === 'Delete' || key === 'Backspace') this.deleteSelected()
-        // Escape cancels the current gesture: drop an in-progress drag, otherwise clear selection.
-        else if (key === 'Escape') {
-            if (this.drawing !== null) this.drawing = null
-            else this.selectedId = null
-        }
+        // Escape cancels the current gesture.
+        else if (key === 'Escape') this.mode = { kind: 'idle' }
     }
 
     private finishDrawing() {
-        if (!this.drawing) return
-        const b = drawingBounds(this.drawing)
+        if (this.mode.kind !== 'drawing') return
+        const b = drawingBounds(this.mode.drawing)
         if (b.w > 2 && b.h > 2) {
-            this.rects.push({ id: crypto.randomUUID(), ...b, seed: this.drawing.seed })
+            this.rects.push({ id: crypto.randomUUID(), ...b, seed: this.mode.drawing.seed })
         }
-        this.drawing = null
+        this.mode = { kind: 'idle' }
     }
 
-    deleteSelected() {
-        if (!this.selectedId) return
-        const idx = this.rects.findIndex(r => r.id === this.selectedId)
+    private deleteSelected() {
+        if (this.mode.kind !== 'selected') return
+        const { selectedId } = this.mode
+        const idx = this.rects.findIndex(r => r.id === selectedId)
         if (idx >= 0) this.rects.splice(idx, 1)
-        this.selectedId = null
+        this.mode = { kind: 'idle' }
     }
-
 }
