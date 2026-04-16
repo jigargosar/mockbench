@@ -778,3 +778,20 @@ Libraries confirmed dead, abandoned, or superseded. Do not re-evaluate.
 | 29 | `clipper-lib` | Legacy Clipper1, integer-only, 6yr stale | `@countertype/clipper2-ts` (#28) |
 | 36 | `@pixi/math` (v7) | Deprecated, merged into pixi.js v8 | `pixi.js` v8 geometry layer |
 | 52 | `polymorph-js` | Unmaintained, inferior to alternatives | `flubber` (#51) + `d3-interpolate-path` (#53) |
+
+### X2 — elm-geometry Coverage Scoring (2026-04-16)
+
+Benchmark: elm-geometry's 22 2D modules (Point2d, Vector2d, Direction2d, Axis2d, Frame2d, BoundingBox2d, LineSegment2d, Triangle2d, Rectangle2d, Circle2d, Ellipse2d, Arc2d, EllipticalArc2d, Polygon2d, Polyline2d, QuadraticSpline2d, CubicSpline2d, DelaunayTriangulation2d, VoronoiDiagram2d, Region2d, Set2d, SweptAngle). Each library scored per-module, then averaged.
+
+| Rank | # | Library | Coverage | 90%+ modules | Key strength | Key gap |
+|---|---|---|---|---|---|---|
+| 1 | 81 | `@thi.ng/geom` | **~78%** | 11 of 22 | 60+ polymorphic ops, ~900 vector fns, tessellation, Delaunay/Voronoi, elliptic arcs | No type-safe Frame2d/Direction2d, no general boolean/CSG, no spatial shape collections |
+| 2 | 4 | `paper` (Paper.js) | **~50-73%** | 11 substantial | Widest shape + curve + boolean coverage, hit-testing | Scene-graph coupled, stalled dev, no Frame2d |
+| 3 | 3 | `jsts` | **~39%** | Polygon 90%, Delaunay 85%, Voronoi 80% | Full topology, spatial index (STRtree) | All curves linearized, no splines, no true circles |
+| 4 | 1 | `@flatten-js/core` | **~32-39%** | 7 substantial | Booleans + DE9IM + PlanarSet spatial index | No splines, no ellipse, no triangle/rect types, no frames |
+| 5 | 40 | `pts` (Pts.js) | **~32%** | Triangle 70%, Rect 65% | Triangle ops (circumcircle, incircle, medial), creative curves | No ellipse, no arc, no Delaunay/Voronoi |
+| 6 | 2 | `2d-geometry` | **~30%** | None | Adds beziers/paths to flatten-js, immutable option | ~2 downloads/wk, no ellipse, no triangle, no Delaunay |
+
+**Universal gap**: No JS/TS library has elm-geometry's Frame2d (typed coordinate frames with relativeTo/placeIn) or Direction2d (typed unit directions). These must be built.
+
+**Emerging direction**: Use elm-geometry as API design reference. For ad-hoc math/computation, lean on established single-purpose libs. For geometry primitives (Rect, Circle, etc.), port elm-geometry's design incrementally — the source is at `docs/external-lib-docs/elm-geometry/src/`.
