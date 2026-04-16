@@ -47,6 +47,17 @@ function createDrawing(x: number, y: number): Drawing {
     return { x0: x, y0: y, x1: x, y1: y, seed: randomSeed() }
 }
 
+function updateDrawing(d: Drawing, x: number, y: number) {
+    d.x1 = x
+    d.y1 = y
+}
+
+function drawingPreview(d: Drawing): { x: number; y: number; w: number; h: number; seed: number } | null {
+    const b = drawingBounds(d)
+    if (b.w <= 0 || b.h <= 0) return null
+    return { ...b, seed: d.seed }
+}
+
 // ── Input types ────────────────────────────────
 
 export type MouseInput = {
@@ -84,9 +95,7 @@ export class CanvasStore {
 
     get previewRect(): { x: number; y: number; w: number; h: number; seed: number } | null {
         if (this.mode.kind !== 'drawing') return null
-        const b = drawingBounds(this.mode.drawing)
-        if (b.w <= 0 || b.h <= 0) return null
-        return { ...b, seed: this.mode.drawing.seed }
+        return drawingPreview(this.mode.drawing)
     }
 
     handleMouseDown({ x, y, button }: MouseInput) {
@@ -105,8 +114,7 @@ export class CanvasStore {
 
     handleMouseMove({ x, y }: MouseInput) {
         if (this.mode.kind !== 'drawing') return
-        this.mode.drawing.x1 = x
-        this.mode.drawing.y1 = y
+        updateDrawing(this.mode.drawing, x, y)
     }
 
     handleMouseUp(_: MouseInput) {
