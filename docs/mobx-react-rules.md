@@ -197,7 +197,3 @@ Numbering is continuous across sections.
 45. Dev-only invariant intercepts are fine as a safety net on top of action-level validation
     Why: Docs call general `intercept` use an AOP anti-pattern. Our narrow use differs: the intercept sits in the constructor next to the actions it guards (not cross-cutting-by-stealth), fires only in DEV (`import.meta.env.DEV`), and exists to catch a future mutation site that forgets to maintain the invariant. Actions still enforce the invariant by construction — the intercept is the tripwire, not the primary guard. Defense in depth, not "validate during mutation instead of before."
     [docs](https://mobx.js.org/intercept-and-observe.html)
-
-46. Wrap all components that read (or might read) observable data in `observer`
-    Why: Docs: "usually all your components should be wrapped by observer"; "more observer components make rendering more efficient as updates become more fine-grained." Wrapping doesn't add cost for components that don't read observables, and preempts the landmine where a future direct read silently returns stale data in PROD (DEV catches it via `observableRequiresReaction`, PROD doesn't). YAGNI doesn't apply — this is preempting a known failure mode, not speculating about a future feature.
-    [docs](https://mobx.js.org/react-integration.html#always-read-observables-inside-observer-components)

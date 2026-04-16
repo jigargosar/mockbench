@@ -8,7 +8,7 @@ if (import.meta.env.DEV) {
     configure({
         enforceActions: 'always',
         computedRequiresReaction: true,
-        reactionRequiresObservable: true,
+        // reactionRequiresObservable: true,
         observableRequiresReaction: true,
         disableErrorBoundaries: true,
     })
