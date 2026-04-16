@@ -21,8 +21,8 @@
 17. Multi-screen documents — project contains multiple screens with navigator and duplicate
 18. Widget linking — link any widget to another screen or external URL
 19. Presentation mode — full-screen click-through of linked screens
-19. Save/load with auto-save and version history
-20. Export — PNG, PDF
+20. Save/load with auto-save and version history
+21. Export — PNG, PDF
 
 ## Unsorted — needs cutting and reprioritizing
 
