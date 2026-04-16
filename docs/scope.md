@@ -18,8 +18,9 @@
 14. Keyboard shortcuts — hotkeys for tools and actions
 15. Group/ungroup
 16. Core widget library — button, text input, dropdown, checkbox, radio, image placeholder, dialog/modal, panel/card, callout, sticky note (first 10; library grows over time to include connectors/arrows)
-17. Multi-screen documents — project contains multiple screens with navigator, duplicate, hierarchy
-18. Presentation mode — full-screen click-through; widgets link to other screens
+17. Multi-screen documents — project contains multiple screens with navigator and duplicate
+18. Widget linking — link any widget to another screen or external URL
+19. Presentation mode — full-screen click-through of linked screens
 19. Save/load with auto-save and version history
 20. Export — PNG, PDF
 
@@ -71,8 +72,7 @@
 59. Clean / wireframe skin — straight-line variant for presentations
 60. Skin toggle — switch entire project between sketch and clean
 61. Hand-drawn font (single font, deliberate constraint)
-62. Limited color palette — grayscale by default
-63. Roughness levels — multiple degrees of sketchiness
+62. Roughness levels — multiple degrees of sketchiness
 
 ### Text-Driven Widget Configuration
 
@@ -88,9 +88,7 @@
 
 71. Page hierarchy — nest screens via naming or drag
 72. Page-level notes — documentation per screen
-73. Link to external URL
-74. Hotspots — invisible clickable regions
-75. Markup toggle in presentation — hide annotations during demo
+73. Hotspots — invisible clickable regions
 
 ### Alternates
 
@@ -143,12 +141,6 @@
 104. Copy as image — clipboard as bitmap
 105. Native format — round-trippable project file
 106. Constraints — pin edges/center so shapes resize with their parent
-
-### UI Chrome
-
-107. Toolbar
-108. Property inspector
-109. Context menu — right-click for common actions
 
 ### Collaboration
 
