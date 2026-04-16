@@ -10,11 +10,11 @@ Scope: a full workspace, not a minimal utility.
 
 ## Library docs
 
-MobX: `docs/mobx/docs/` (shallow clone of mobxjs/mobx). Read these markdown files directly for authoritative API/behavior — do not fetch HTML from mobx.js.org.
+Shallow clones of upstream docs live under `docs/`. Read these directly — do not fetch from project websites.
 
-MobX-utils: `docs/mobx-utils/` (shallow clone of mobxjs/mobx-utils). Read `README.md` for API reference.
-
-Rough.js wiki: `docs/roughjs-wiki/` (shallow clone of rough-stuff/rough.wiki). Read these markdown files directly for API/behavior reference.
+1. MobX — docs/mobx/docs/
+2. MobX-utils — docs/mobx-utils/README.md
+3. Rough.js — docs/roughjs-wiki/Home.md
 
 ## Rules maintenance
 
