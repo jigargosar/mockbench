@@ -10,11 +10,11 @@ Scope: a full workspace, not a minimal utility.
 
 ## Library docs
 
-Shallow clones of upstream docs live under `docs/`. Read these directly — do not fetch from project websites.
+Authoritative documentation for the following libraries lives in docs/external-lib-docs/.
 
-1. MobX — docs/mobx/docs/
-2. MobX-utils — docs/mobx-utils/README.md
-3. Rough.js — docs/roughjs-wiki/Home.md
+1. MobX — mobx/docs/
+2. MobX-utils — mobx-utils/README.md
+3. Rough.js — roughjs-wiki/Home.md
 
 ## Rules maintenance
 

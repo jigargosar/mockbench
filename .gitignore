@@ -24,6 +24,4 @@ dist
 elm-stuff
 
 /.claude/scheduled_tasks.lock
-docs/mobx/
-docs/roughjs-wiki/
-docs/mobx-utils/
+docs/external-lib-docs/
