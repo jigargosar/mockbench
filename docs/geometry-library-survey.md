@@ -762,3 +762,19 @@ Researched 2026-04-16. 79 libraries across 9 categories.
 - **Pan/zoom**: Manual via `stage.draggable`, `stage.scaleX/Y()` on wheel events. ~20 lines for zoom-to-pointer.
 - **TypeScript**: Written in TypeScript
 - **Notable**: No deceleration, snap, or camera animation built in. Production-proven.
+
+---
+
+## Decision Journal
+
+### X1 — Discarded (2026-04-16)
+
+Libraries confirmed dead, abandoned, or superseded. Do not re-evaluate.
+
+| # | Discarded | Reason | Successor (stays in pool) |
+|---|---|---|---|
+| 14 | `transformation-matrix-js` | Author abandoned | `transformation-matrix` (#5) |
+| 40 | `svg-intersections` | Dead since 2018, superseded | `kld-intersections` (#19) |
+| 29 | `clipper-lib` | Legacy Clipper1, integer-only, 6yr stale | `@countertype/clipper2-ts` (#28) |
+| 36 | `@pixi/math` (v7) | Deprecated, merged into pixi.js v8 | `pixi.js` v8 geometry layer |
+| 52 | `polymorph-js` | Unmaintained, inferior to alternatives | `flubber` (#51) + `d3-interpolate-path` (#53) |
