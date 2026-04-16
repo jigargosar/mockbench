@@ -15,6 +15,8 @@ Authoritative documentation for the following libraries lives in docs/external-l
 1. MobX — mobx/docs/
 2. MobX-utils — mobx-utils/README.md
 3. Rough.js — roughjs-wiki/Home.md
+4. elm-geometry — elm-geometry/src/ (Elm 2D/3D geometry, API design reference)
+5. @mathigon/euclid — mathigon-euclid/src/ (TypeScript 2D geometry, immutable classes)
 
 ## Rules maintenance
 
