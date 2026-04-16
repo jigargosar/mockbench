@@ -12,6 +12,10 @@ Scope: a full workspace, not a minimal utility.
 
 MobX: `docs/mobx/docs/` (shallow clone of mobxjs/mobx). Read these markdown files directly for authoritative API/behavior — do not fetch HTML from mobx.js.org.
 
+MobX-utils: `docs/mobx-utils/` (shallow clone of mobxjs/mobx-utils). Read `README.md` for API reference.
+
+Rough.js wiki: `docs/roughjs-wiki/` (shallow clone of rough-stuff/rough.wiki). Read these markdown files directly for API/behavior reference.
+
 ## Rules maintenance
 
 When a bug surfaces — whether newly discovered or a variant of something already known — capture the lesson in `docs/mobx-react-rules.md`. Add a new rule if the lesson is orthogonal to existing ones; merge into the closest existing rule if it's a variant. The rules file is the canonical dos-and-don'ts ledger; keep it current.
