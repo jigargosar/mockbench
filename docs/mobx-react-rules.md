@@ -11,8 +11,11 @@ Numbering is continuous across sections.
 
 ## MobX × React integration
 
-1. Wrap every component that reads observable data with `observer`
-   Why: Without `observer`, the component doesn't subscribe to the observables it reads — it renders stale data and no error fires.
+1. Wrap every React component in `observer` — even ones that don't currently read observables
+   Why: This convention helps us from a potential landmine when we start using observable in that component. Also without `observer`, the component doesn't subscribe to the observables it reads — it renders stale data and no error fires in prod.
+   Config Aside: 
+      1. `observableRequiresReaction`: Enable in dev — catches reads of observables outside a reaction, so you know immediately when a component forgot `observer`. This doesnt violate YAGNI.
+      2. `reactionRequiresObservable`: Don't enable in dev, creates Noise. It warns when an `observer` doesn't access any observables. Keep disabled (default `false`).
    [docs](https://mobx.js.org/react-integration.html#always-read-observables-inside-observer-components)
 
 2. Don't wrap `observer(Component)` in `React.memo`
