@@ -1,70 +1,19 @@
 import { makeAutoObservable } from 'mobx'
+import { BoundingBox2d } from './geom/BoundingBox2d'
+import { Point2d } from './geom/Point2d'
+import { Vector2d } from './geom/Vector2d'
 import { assertNever } from './utils'
-
-// ── Rect model ─────────────────────────────────
 
 export type Rect = {
     id: string
-    x: number
-    y: number
-    w: number
-    h: number
+    box: BoundingBox2d
     seed: number
-}
-
-function hitTest(rects: readonly Rect[], x: number, y: number): Rect | undefined {
-    for (let i = rects.length - 1; i >= 0; i--) {
-        const r = rects[i]
-        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r
-    }
-    return undefined
-}
-
-function moveRect(r: Rect, dx: number, dy: number) {
-    r.x += dx
-    r.y += dy
-}
-
-// ── Drawing model ──────────────────────────────
-
-type Drawing = {
-    x0: number
-    y0: number
-    x1: number
-    y1: number
-    seed: number
-}
-
-function drawingBounds(d: Drawing) {
-    return {
-        x: Math.min(d.x0, d.x1),
-        y: Math.min(d.y0, d.y1),
-        w: Math.abs(d.x1 - d.x0),
-        h: Math.abs(d.y1 - d.y0),
-    }
 }
 
 // rough.js treats seed=0 as "re-seed on every call", so we exclude it via `|| 1`.
 function randomSeed(): number {
     return Math.floor(Math.random() * 2 ** 31) || 1
 }
-
-function createDrawing(x: number, y: number): Drawing {
-    return { x0: x, y0: y, x1: x, y1: y, seed: randomSeed() }
-}
-
-function updateDrawing(d: Drawing, x: number, y: number) {
-    d.x1 = x
-    d.y1 = y
-}
-
-function drawingPreview(d: Drawing): { x: number; y: number; w: number; h: number; seed: number } | null {
-    const b = drawingBounds(d)
-    if (b.w <= 0 || b.h <= 0) return null
-    return { ...b, seed: d.seed }
-}
-
-// ── Input types ────────────────────────────────
 
 export type MouseInput = {
     x: number
@@ -76,15 +25,11 @@ export type KeyboardInput = {
     key: string
 }
 
-// ── Interaction mode ───────────────────────────
-
 type Mode =
     | { tag: 'idle' }
-    | { tag: 'drawing'; drawing: Drawing }
+    | { tag: 'drawing'; start: Point2d; current: Point2d; seed: number }
     | { tag: 'selected'; selectedId: string }
-    | { tag: 'moving'; selectedId: string; lastX: number; lastY: number }
-
-// ── Store ──────────────────────────────────────
+    | { tag: 'moving'; selectedId: string; lastPoint: Point2d }
 
 export class CanvasStore {
     rects: Rect[] = []
@@ -108,11 +53,13 @@ export class CanvasStore {
         }
     }
 
-    get previewRect(): { x: number; y: number; w: number; h: number; seed: number } | null {
+    get previewRect(): { box: BoundingBox2d; seed: number } | null {
         const m = this.mode
         switch (m.tag) {
-            case 'drawing':
-                return drawingPreview(m.drawing)
+            case 'drawing': {
+                const box = BoundingBox2d.from(m.start, m.current)
+                return box.isEmpty() ? null : { box, seed: m.seed }
+            }
             case 'idle':
             case 'selected':
             case 'moving':
@@ -124,6 +71,7 @@ export class CanvasStore {
 
     handleMouseDown({ x, y, button }: MouseInput) {
         if (button !== 0) return
+        const point = Point2d.xy(x, y)
         const m = this.mode
         switch (m.tag) {
             case 'drawing':
@@ -138,25 +86,25 @@ export class CanvasStore {
             default:
                 assertNever(m)
         }
-        const hit = hitTest(this.rects, x, y)
+        const hit = this.findTopmostAt(point)
         if (hit) {
-            this.mode = { tag: 'moving', selectedId: hit.id, lastX: x, lastY: y }
+            this.mode = { tag: 'moving', selectedId: hit.id, lastPoint: point }
         } else {
-            this.mode = { tag: 'drawing', drawing: createDrawing(x, y) }
+            this.mode = { tag: 'drawing', start: point, current: point, seed: randomSeed() }
         }
     }
 
     handleMouseMove({ x, y }: MouseInput) {
+        const point = Point2d.xy(x, y)
         const m = this.mode
         switch (m.tag) {
             case 'drawing':
-                updateDrawing(m.drawing, x, y)
+                m.current = point
                 break
             case 'moving': {
                 const rect = this.rects.find(r => r.id === m.selectedId)
-                if (rect) moveRect(rect, x - m.lastX, y - m.lastY)
-                m.lastX = x
-                m.lastY = y
+                if (rect) rect.box = rect.box.translateBy(Vector2d.from(m.lastPoint, point))
+                m.lastPoint = point
                 break
             }
             case 'idle':
@@ -191,13 +139,21 @@ export class CanvasStore {
         else if (key === 'Escape') this.mode = { tag: 'idle' }
     }
 
+    private findTopmostAt(point: Point2d): Rect | undefined {
+        for (let i = this.rects.length - 1; i >= 0; i--) {
+            const r = this.rects[i]
+            if (r.box.contains(point)) return r
+        }
+        return undefined
+    }
+
     private finishDrawing() {
         const m = this.mode
         switch (m.tag) {
             case 'drawing': {
-                const b = drawingBounds(m.drawing)
-                if (b.w > 2 && b.h > 2) {
-                    this.rects.push({ id: crypto.randomUUID(), ...b, seed: m.drawing.seed })
+                const box = BoundingBox2d.from(m.start, m.current)
+                if (box.width > 2 && box.height > 2) {
+                    this.rects.push({ id: crypto.randomUUID(), box, seed: m.seed })
                 }
                 this.mode = { tag: 'idle' }
                 break

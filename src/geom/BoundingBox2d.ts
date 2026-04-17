@@ -1,4 +1,5 @@
 import { Point2d } from './Point2d'
+import { Vector2d } from './Vector2d'
 
 export class BoundingBox2d {
     private constructor(
@@ -36,8 +37,12 @@ export class BoundingBox2d {
         )
     }
 
-    translateBy(dx: number, dy: number): BoundingBox2d {
-        return new BoundingBox2d(this.x + dx, this.y + dy, this.w, this.h)
+    translateBy(v: Vector2d): BoundingBox2d {
+        return new BoundingBox2d(this.x + v.xComponent, this.y + v.yComponent, this.w, this.h)
+    }
+
+    isEmpty(): boolean {
+        return this.w === 0 || this.h === 0
     }
 
     expandBy(margin: number): BoundingBox2d {

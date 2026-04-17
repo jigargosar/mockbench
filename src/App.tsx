@@ -3,11 +3,13 @@ import { observer } from 'mobx-react-lite'
 import { type MouseEvent } from 'react'
 import rough from 'roughjs'
 import { CanvasStore, type MouseInput, type Rect } from './store'
+import type { BoundingBox2d } from './geom/BoundingBox2d'
 
 // AI: figure out a way to make this non-global.
 const generator = rough.generator()
 
-function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: number; seed: number }) {
+function RoughRect({ box, seed }: { box: BoundingBox2d; seed: number }) {
+    const { x, y, w, h } = box.toObject()
     const paths = generator.toPaths(generator.rectangle(x, y, w, h, { seed }))
     return (
         <g>
@@ -20,7 +22,7 @@ function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: n
 }
 
 const RectItem = observer(function RectItem({ rect }: { rect: Rect }) {
-    return <RoughRect x={rect.x} y={rect.y} w={rect.w} h={rect.h} seed={rect.seed} />
+    return <RoughRect box={rect.box} seed={rect.seed} />
 })
 
 const RectsView = observer(function RectsView({ store }: { store: CanvasStore }) {
@@ -36,18 +38,19 @@ const RectsView = observer(function RectsView({ store }: { store: CanvasStore })
 const Preview = observer(function Preview({ store }: { store: CanvasStore }) {
     const p = store.previewRect
     if (!p) return null
-    return <RoughRect x={p.x} y={p.y} w={p.w} h={p.h} seed={p.seed} />
+    return <RoughRect box={p.box} seed={p.seed} />
 })
 
 const SelectionBorder = observer(function SelectionBorder({ store }: { store: CanvasStore }) {
     const sel = store.selectedRect
     if (!sel) return null
+    const bordered = sel.box.expandBy(4)
     return (
         <rect
-            x={sel.x - 4}
-            y={sel.y - 4}
-            width={sel.w + 8}
-            height={sel.h + 8}
+            x={bordered.minX}
+            y={bordered.minY}
+            width={bordered.width}
+            height={bordered.height}
             fill="none"
             stroke="#3b82f6"
             strokeWidth={1}

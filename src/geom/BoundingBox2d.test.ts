@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { BoundingBox2d } from './BoundingBox2d'
 import { Point2d } from './Point2d'
+import { Vector2d } from './Vector2d'
 
 describe('BoundingBox2d', () => {
     describe('from', () => {
@@ -63,9 +64,9 @@ describe('BoundingBox2d', () => {
     })
 
     describe('translateBy', () => {
-        it('returns a new box shifted by dx/dy', () => {
+        it('returns a new box shifted by the given vector', () => {
             const box = BoundingBox2d.from(Point2d.xy(1, 2), Point2d.xy(4, 6))
-            const moved = box.translateBy(10, 20)
+            const moved = box.translateBy(Vector2d.from(Point2d.xy(0, 0), Point2d.xy(10, 20)))
             expect(moved.minX).toBe(11)
             expect(moved.minY).toBe(22)
             expect(moved.width).toBe(3)
@@ -74,17 +75,41 @@ describe('BoundingBox2d', () => {
 
         it('leaves the original box unchanged', () => {
             const box = BoundingBox2d.from(Point2d.xy(1, 2), Point2d.xy(4, 6))
-            box.translateBy(10, 20)
+            box.translateBy(Vector2d.from(Point2d.xy(0, 0), Point2d.xy(10, 20)))
             expect(box.minX).toBe(1)
             expect(box.minY).toBe(2)
             expect(box.width).toBe(3)
             expect(box.height).toBe(4)
         })
 
-        it('returns an equal box when translating by (0, 0)', () => {
+        it('returns an equal box when translating by a zero vector', () => {
             const box = BoundingBox2d.from(Point2d.xy(1, 2), Point2d.xy(4, 6))
-            const moved = box.translateBy(0, 0)
+            const p = Point2d.xy(7, 7)
+            const moved = box.translateBy(Vector2d.from(p, p))
             expect(box.equals(moved)).toBe(true)
+        })
+    })
+
+    describe('isEmpty', () => {
+        it('returns true when width is zero', () => {
+            const box = BoundingBox2d.from(Point2d.xy(3, 2), Point2d.xy(3, 6))
+            expect(box.isEmpty()).toBe(true)
+        })
+
+        it('returns true when height is zero', () => {
+            const box = BoundingBox2d.from(Point2d.xy(1, 5), Point2d.xy(4, 5))
+            expect(box.isEmpty()).toBe(true)
+        })
+
+        it('returns true for a singleton point-to-point box', () => {
+            const p = Point2d.xy(3, 5)
+            const box = BoundingBox2d.from(p, p)
+            expect(box.isEmpty()).toBe(true)
+        })
+
+        it('returns false for a box with positive width and height', () => {
+            const box = BoundingBox2d.from(Point2d.xy(1, 2), Point2d.xy(4, 6))
+            expect(box.isEmpty()).toBe(false)
         })
     })
 
