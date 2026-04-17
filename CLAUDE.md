@@ -19,6 +19,15 @@ Authoritative documentation for the following libraries lives in docs/external-l
 3. Rough.js — roughjs-wiki/Home.md
 4. elm-geometry — elm-geometry/src/ (Elm 2D/3D geometry, API design reference)
 
+## Workflow files
+
+1. `docs/scope.md` — ship-first feature list, then unsorted backlog.
+2. `docs/refactoring.md` — technical improvements that don't add user-visible features.
+
+## Development rhythm
+
+Prefer shipping features. Note refactor ideas for later. After each feature ships, 2–3 refactor items are fair game.
+
 ## Rules maintenance
 
 When a bug surfaces — whether newly discovered or a variant of something already known — capture the lesson in `docs/mobx-react-rules.md`. Add a new rule if the lesson is orthogonal to existing ones; merge into the closest existing rule if it's a variant. The rules file is the canonical dos-and-don'ts ledger; keep it current.
