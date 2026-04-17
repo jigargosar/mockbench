@@ -1,4 +1,5 @@
 import { makeAutoObservable } from 'mobx'
+import { assertNever } from './utils'
 
 // ── Rect model ─────────────────────────────────
 
@@ -17,6 +18,11 @@ function hitTest(rects: readonly Rect[], x: number, y: number): Rect | undefined
         if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r
     }
     return undefined
+}
+
+function moveRect(r: Rect, dx: number, dy: number) {
+    r.x += dx
+    r.y += dy
 }
 
 // ── Drawing model ──────────────────────────────
@@ -73,75 +79,153 @@ export type KeyboardInput = {
 // ── Interaction mode ───────────────────────────
 
 type Mode =
-    | { kind: 'idle' }
-    | { kind: 'drawing'; drawing: Drawing }
-    | { kind: 'selected'; selectedId: string }
+    | { tag: 'idle' }
+    | { tag: 'drawing'; drawing: Drawing }
+    | { tag: 'selected'; selectedId: string }
+    | { tag: 'moving'; selectedId: string; lastX: number; lastY: number }
 
 // ── Store ──────────────────────────────────────
 
 export class CanvasStore {
     rects: Rect[] = []
-    private mode: Mode = { kind: 'idle' }
+    private mode: Mode = { tag: 'idle' }
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true })
     }
 
     get selectedRect(): Rect | undefined {
-        if (this.mode.kind !== 'selected') return undefined
-        const { selectedId } = this.mode
-        return this.rects.find(r => r.id === selectedId)
+        const m = this.mode
+        switch (m.tag) {
+            case 'selected':
+            case 'moving':
+                return this.rects.find(r => r.id === m.selectedId)
+            case 'idle':
+            case 'drawing':
+                return undefined
+            default:
+                assertNever(m)
+        }
     }
 
     get previewRect(): { x: number; y: number; w: number; h: number; seed: number } | null {
-        if (this.mode.kind !== 'drawing') return null
-        return drawingPreview(this.mode.drawing)
+        const m = this.mode
+        switch (m.tag) {
+            case 'drawing':
+                return drawingPreview(m.drawing)
+            case 'idle':
+            case 'selected':
+            case 'moving':
+                return null
+            default:
+                assertNever(m)
+        }
     }
 
     handleMouseDown({ x, y, button }: MouseInput) {
         if (button !== 0) return
-        if (this.mode.kind === 'drawing') {
-            this.finishDrawing()
-            return
+        const m = this.mode
+        switch (m.tag) {
+            case 'drawing':
+                this.finishDrawing()
+                return
+            case 'moving':
+                this.mode = { tag: 'selected', selectedId: m.selectedId }
+                return
+            case 'idle':
+            case 'selected':
+                break
+            default:
+                assertNever(m)
         }
         const hit = hitTest(this.rects, x, y)
         if (hit) {
-            this.mode = { kind: 'selected', selectedId: hit.id }
-            return
+            this.mode = { tag: 'moving', selectedId: hit.id, lastX: x, lastY: y }
+        } else {
+            this.mode = { tag: 'drawing', drawing: createDrawing(x, y) }
         }
-        this.mode = { kind: 'drawing', drawing: createDrawing(x, y) }
     }
 
     handleMouseMove({ x, y }: MouseInput) {
-        if (this.mode.kind !== 'drawing') return
-        updateDrawing(this.mode.drawing, x, y)
+        const m = this.mode
+        switch (m.tag) {
+            case 'drawing':
+                updateDrawing(m.drawing, x, y)
+                break
+            case 'moving': {
+                const rect = this.rects.find(r => r.id === m.selectedId)
+                if (rect) moveRect(rect, x - m.lastX, y - m.lastY)
+                m.lastX = x
+                m.lastY = y
+                break
+            }
+            case 'idle':
+            case 'selected':
+                break
+            default:
+                assertNever(m)
+        }
     }
 
     handleMouseUp(_: MouseInput) {
-        this.finishDrawing()
+        const m = this.mode
+        switch (m.tag) {
+            case 'drawing':
+                this.finishDrawing()
+                break
+            case 'moving':
+                this.mode = { tag: 'selected', selectedId: m.selectedId }
+                break
+            case 'idle':
+            case 'selected':
+                break
+            default:
+                assertNever(m)
+        }
     }
 
     handleKeyDown({ key }: KeyboardInput) {
         // Mac uses Backspace as the delete key; Windows/Linux use Delete. Accept both.
         if (key === 'Delete' || key === 'Backspace') this.deleteSelected()
         // Escape cancels the current gesture.
-        else if (key === 'Escape') this.mode = { kind: 'idle' }
+        else if (key === 'Escape') this.mode = { tag: 'idle' }
     }
 
     private finishDrawing() {
-        if (this.mode.kind !== 'drawing') return
-        const b = drawingBounds(this.mode.drawing)
-        if (b.w > 2 && b.h > 2) {
-            this.rects.push({ id: crypto.randomUUID(), ...b, seed: this.mode.drawing.seed })
+        const m = this.mode
+        switch (m.tag) {
+            case 'drawing': {
+                const b = drawingBounds(m.drawing)
+                if (b.w > 2 && b.h > 2) {
+                    this.rects.push({ id: crypto.randomUUID(), ...b, seed: m.drawing.seed })
+                }
+                this.mode = { tag: 'idle' }
+                break
+            }
+            case 'idle':
+            case 'selected':
+            case 'moving':
+                break
+            default:
+                assertNever(m)
         }
-        this.mode = { kind: 'idle' }
     }
 
     private deleteSelected() {
-        if (this.mode.kind !== 'selected') return
-        const { selectedId } = this.mode
-        const idx = this.rects.findIndex(r => r.id === selectedId)
-        if (idx >= 0) this.rects.splice(idx, 1)
-        this.mode = { kind: 'idle' }
+        const m = this.mode
+        switch (m.tag) {
+            case 'selected': {
+                const idx = this.rects.findIndex(r => r.id === m.selectedId)
+                if (idx >= 0) this.rects.splice(idx, 1)
+                this.mode = { tag: 'idle' }
+                break
+            }
+            case 'idle':
+            case 'drawing':
+            case 'moving':
+                break
+            default:
+                assertNever(m)
+        }
     }
 }
