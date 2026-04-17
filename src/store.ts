@@ -4,6 +4,9 @@ import { Point2d } from './geom/Point2d'
 import { Vector2d } from './geom/Vector2d'
 import { assertNever } from './utils'
 
+const SELECTION_BORDER_PX = 4
+const MIN_COMMIT_PX = 2
+
 export type Rect = {
     id: string
     box: BoundingBox2d
@@ -16,8 +19,7 @@ function randomSeed(): number {
 }
 
 export type MouseInput = {
-    x: number
-    y: number
+    point: Point2d
     button: number
 }
 
@@ -53,6 +55,10 @@ export class CanvasStore {
         }
     }
 
+    get selectionBox(): BoundingBox2d | null {
+        return this.selectedRect?.box.expandBy(SELECTION_BORDER_PX) ?? null
+    }
+
     get previewRect(): { box: BoundingBox2d; seed: number } | null {
         const m = this.mode
         switch (m.tag) {
@@ -69,9 +75,8 @@ export class CanvasStore {
         }
     }
 
-    handleMouseDown({ x, y, button }: MouseInput) {
+    handleMouseDown({ point, button }: MouseInput) {
         if (button !== 0) return
-        const point = Point2d.xy(x, y)
         const m = this.mode
         switch (m.tag) {
             case 'drawing':
@@ -94,8 +99,7 @@ export class CanvasStore {
         }
     }
 
-    handleMouseMove({ x, y }: MouseInput) {
-        const point = Point2d.xy(x, y)
+    handleMouseMove({ point }: MouseInput) {
         const m = this.mode
         switch (m.tag) {
             case 'drawing':
@@ -152,7 +156,7 @@ export class CanvasStore {
         switch (m.tag) {
             case 'drawing': {
                 const box = BoundingBox2d.from(m.start, m.current)
-                if (box.width > 2 && box.height > 2) {
+                if (box.width > MIN_COMMIT_PX && box.height > MIN_COMMIT_PX) {
                     this.rects.push({ id: crypto.randomUUID(), box, seed: m.seed })
                 }
                 this.mode = { tag: 'idle' }

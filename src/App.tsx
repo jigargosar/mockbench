@@ -4,6 +4,7 @@ import { type MouseEvent } from 'react'
 import rough from 'roughjs'
 import { CanvasStore, type MouseInput, type Rect } from './store'
 import type { BoundingBox2d } from './geom/BoundingBox2d'
+import { Point2d } from './geom/Point2d'
 
 // AI: figure out a way to make this non-global.
 const generator = rough.generator()
@@ -42,15 +43,14 @@ const Preview = observer(function Preview({ store }: { store: CanvasStore }) {
 })
 
 const SelectionBorder = observer(function SelectionBorder({ store }: { store: CanvasStore }) {
-    const sel = store.selectedRect
-    if (!sel) return null
-    const bordered = sel.box.expandBy(4)
+    const box = store.selectionBox
+    if (!box) return null
     return (
         <rect
-            x={bordered.minX}
-            y={bordered.minY}
-            width={bordered.width}
-            height={bordered.height}
+            x={box.minX}
+            y={box.minY}
+            width={box.width}
+            height={box.height}
             fill="none"
             stroke="#3b82f6"
             strokeWidth={1}
@@ -68,9 +68,10 @@ export default observer(function App() {
         return () => window.removeEventListener('keydown', onKey)
     }, [store])
 
+    // Landmine: returns SVG viewport coords. Coord-space mismatch risk when infinite canvas / pan / zoom lands.
     const toMouseInput = (e: MouseEvent<SVGSVGElement>): MouseInput => {
         const box = e.currentTarget.getBoundingClientRect()
-        return { x: e.clientX - box.left, y: e.clientY - box.top, button: e.button }
+        return { point: Point2d.xy(e.clientX - box.left, e.clientY - box.top), button: e.button }
     }
 
     return (
