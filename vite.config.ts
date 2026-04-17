@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -11,4 +12,7 @@ export default defineConfig({
         // Enables Chrome DevTools to auto-connect to the local project folder as a Workspace
         devtoolsJson(),
     ],
+    test: {
+        include: ['src/**/*.test.ts'],
+    },
 })

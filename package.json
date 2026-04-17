@@ -8,18 +8,23 @@
         "build": "vite build",
         "preview": "vite preview",
         "typecheck": "tsc --noEmit",
-        "typecheck:watch": "tsc --noEmit --watch"
+        "typecheck:watch": "tsc --noEmit --watch",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:ui": "vitest --ui --watch"
     },
     "devDependencies": {
         "@tailwindcss/vite": "4.2.2",
         "@types/react": "19.2.14",
         "@types/react-dom": "19.2.3",
         "@vitejs/plugin-react": "6.0.1",
+        "@vitest/ui": "4.1.4",
         "prettier": "3.8.1",
         "tailwindcss": "4.2.2",
         "typescript": "6.0.2",
         "vite": "8.0.8",
-        "vite-plugin-devtools-json": "1.0.0"
+        "vite-plugin-devtools-json": "1.0.0",
+        "vitest": "4.1.4"
     },
     "dependencies": {
         "mobx": "6.15.0",
