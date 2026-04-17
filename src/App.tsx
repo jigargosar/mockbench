@@ -4,6 +4,7 @@ import { type MouseEvent } from 'react'
 import rough from 'roughjs'
 import { CanvasStore, type MouseInput, type Rect } from './store'
 
+// AI: figure out a way to make this non-global.
 const generator = rough.generator()
 
 function RoughRect({ x, y, w, h, seed }: { x: number; y: number; w: number; h: number; seed: number }) {
