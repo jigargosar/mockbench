@@ -5,6 +5,7 @@ import rough from 'roughjs'
 import { CanvasStore, type MouseInput, type Rect } from './store'
 import type { BoundingBox2d } from './geom/BoundingBox2d'
 import { Point2d } from './geom/Point2d'
+import { FontSamples } from './FontSamples'
 
 // AI: figure out a way to make this non-global.
 const generator = rough.generator()
@@ -85,6 +86,7 @@ export default observer(function App() {
                 <RectsView store={store} />
                 <Preview store={store} />
                 <SelectionBorder store={store} />
+                <FontSamples />
             </svg>
         </div>
     )
