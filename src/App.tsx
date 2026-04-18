@@ -1,46 +1,34 @@
 import { useEffect, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { type MouseEvent } from 'react'
-import rough from 'roughjs'
-import { CanvasStore, type MouseInput, type Rect } from './store'
-import type { BoundingBox2d } from './geom/BoundingBox2d'
+import { CanvasStore, type MouseInput, type PathSpec } from './store'
 import { Point2d } from './geom/Point2d'
 import { FontSamples } from './FontSamples'
 
-// AI: figure out a way to make this non-global.
-const generator = rough.generator()
-
-function RoughRect({ box, seed }: { box: BoundingBox2d; seed: number }) {
-    const { x, y, w, h } = box.toObject()
-    const paths = generator.toPaths(generator.rectangle(x, y, w, h, { seed }))
+function RoughRect({ paths }: { paths: ReadonlyArray<PathSpec> }) {
     return (
         <g>
-            {paths.map((p) => (
-                // Path `d` is stable per rect+seed and distinct across outline/fill; safe as key.
-                <path key={p.d} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
+            {paths.map(p => (
+                <path key={p.key} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
             ))}
         </g>
     )
 }
 
-const RectItem = observer(function RectItem({ rect }: { rect: Rect }) {
-    return <RoughRect box={rect.box} seed={rect.seed} />
-})
-
 const RectsView = observer(function RectsView({ store }: { store: CanvasStore }) {
     return (
         <>
-            {store.rects.map(r => (
-                <RectItem rect={r} key={r.id} />
+            {store.committedShapes.map(s => (
+                <RoughRect key={s.id} paths={s.paths} />
             ))}
         </>
     )
 })
 
 const Preview = observer(function Preview({ store }: { store: CanvasStore }) {
-    const p = store.previewRect
-    if (!p) return null
-    return <RoughRect box={p.box} seed={p.seed} />
+    const paths = store.previewPaths
+    if (!paths) return null
+    return <RoughRect paths={paths} />
 })
 
 const SelectionBorder = observer(function SelectionBorder({ store }: { store: CanvasStore }) {

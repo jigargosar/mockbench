@@ -1,4 +1,5 @@
 import { makeAutoObservable } from 'mobx'
+import rough from 'roughjs'
 import { BoundingBox2d } from './geom/BoundingBox2d'
 import { Point2d } from './geom/Point2d'
 import { Vector2d } from './geom/Vector2d'
@@ -7,7 +8,17 @@ import { assertNever } from './utils'
 const SELECTION_BORDER_PX = 4
 const MIN_COMMIT_PX = 2
 
-export type Rect = {
+const generator = rough.generator()
+
+export type PathSpec = {
+    key: string
+    d: string
+    stroke: string
+    strokeWidth: number
+    fill: string | null
+}
+
+type Rect = {
     id: string
     box: BoundingBox2d
     seed: number
@@ -34,14 +45,14 @@ type Mode =
     | { tag: 'moving'; selectedId: string; lastPoint: Point2d }
 
 export class CanvasStore {
-    rects: Rect[] = []
+    private rects: Rect[] = []
     private mode: Mode = { tag: 'idle' }
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true })
     }
 
-    get selectedRect(): Rect | undefined {
+    private get selectedRect(): Rect | undefined {
         const m = this.mode
         switch (m.tag) {
             case 'selected':
@@ -59,12 +70,16 @@ export class CanvasStore {
         return this.selectedRect?.box.expandBy(SELECTION_BORDER_PX) ?? null
     }
 
-    get previewRect(): { box: BoundingBox2d; seed: number } | null {
+    get committedShapes(): ReadonlyArray<{ id: string; paths: ReadonlyArray<PathSpec> }> {
+        return this.rects.map(r => ({ id: r.id, paths: this.rectPaths(r.box, r.seed, r.id) }))
+    }
+
+    get previewPaths(): ReadonlyArray<PathSpec> | null {
         const m = this.mode
         switch (m.tag) {
             case 'drawing': {
                 const box = BoundingBox2d.from(m.start, m.current)
-                return box.isEmpty() ? null : { box, seed: m.seed }
+                return box.isEmpty() ? null : this.rectPaths(box, m.seed, 'preview')
             }
             case 'idle':
             case 'selected':
@@ -149,6 +164,17 @@ export class CanvasStore {
             if (r.box.contains(point)) return r
         }
         return undefined
+    }
+
+    private rectPaths(box: BoundingBox2d, seed: number, keyPrefix: string): ReadonlyArray<PathSpec> {
+        const { x, y, w, h } = box.toObject()
+        return generator.toPaths(generator.rectangle(x, y, w, h, { seed })).map((p, i) => ({
+            key: `${keyPrefix}:${i}`,
+            d: p.d,
+            stroke: p.stroke,
+            strokeWidth: p.strokeWidth,
+            fill: p.fill ?? null,
+        }))
     }
 
     private finishDrawing() {
