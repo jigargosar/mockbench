@@ -1,5 +1,5 @@
 {
-    "name": "mockbench",
+    "name": "mock-bench",
     "private": true,
     "version": "0.0.0",
     "type": "module",
