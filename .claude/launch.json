@@ -1,0 +1,35 @@
+{
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "vite-dev",
+            "runtimeExecutable": "pnpm",
+            "runtimeArgs": ["run", "dev"],
+            "port": 5173
+        },
+        {
+            "name": "vite-preview",
+            "runtimeExecutable": "pnpm",
+            "runtimeArgs": ["run", "preview"],
+            "port": 4173
+        },
+        {
+            "name": "vitest-ui",
+            "runtimeExecutable": "pnpm",
+            "runtimeArgs": ["run", "test:ui"],
+            "port": 51204
+        },
+        {
+            "name": "typecheck-watch",
+            "runtimeExecutable": "pnpm",
+            "runtimeArgs": ["run", "typecheck:watch"],
+            "port": 0
+        },
+        {
+            "name": "test-watch",
+            "runtimeExecutable": "pnpm",
+            "runtimeArgs": ["run", "test:watch"],
+            "port": 0
+        }
+    ]
+}
