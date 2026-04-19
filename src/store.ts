@@ -21,21 +21,27 @@ function randomSeed(): number {
 // ── SVG render specs ──────────────────────────────
 export type PathSpec = {
     readonly id: string
-    readonly d: string
-    readonly stroke: string
-    readonly strokeWidth: number
-    readonly fill: string
-    readonly opacity?: number
+    readonly svgProps: {
+        readonly d: string
+        readonly stroke: string
+        readonly strokeWidth: number
+        readonly fill: string
+        readonly opacity: number
+    }
 }
 
 export type TextSpec = {
     readonly id: string
     readonly center: Point2d
     readonly text: string
-    readonly fontFamily: string
-    readonly fontSize: number
-    readonly fill: string
-    readonly opacity?: number
+    readonly svgProps: {
+        readonly fontFamily: '"Kalam", cursive'
+        readonly fontSize: 20
+        readonly fill: '#111'
+        readonly opacity: number
+        readonly textAnchor: 'middle'
+        readonly dominantBaseline: 'central'
+    }
 }
 
 // ── View items ────────────────────────────────────
@@ -58,11 +64,13 @@ function rectPaths(box: BoundingBox2d, seed: number, opacity: number): ReadonlyA
         // with identical box+seed would collide — but we have no simple per-path id
         // from rough.js. Deferred; not a real problem at current scale.
         id: p.d,
-        d: p.d,
-        stroke: p.stroke,
-        strokeWidth: p.strokeWidth,
-        fill: p.fill ?? 'none',
-        opacity,
+        svgProps: {
+            d: p.d,
+            stroke: p.stroke,
+            strokeWidth: p.strokeWidth,
+            fill: p.fill ?? 'none',
+            opacity,
+        },
     }))
 }
 
@@ -71,15 +79,6 @@ function rectViewItem(box: BoundingBox2d, seed: number, id: string, opacity: num
 }
 
 // ── Button ────────────────────────────────────────
-const BUTTON_W = 140
-const BUTTON_H = 44
-const BUTTON_LABEL = 'Button'
-const BUTTON_FONT_FAMILY = '"Kalam", cursive'
-const BUTTON_FONT_SIZE = 20
-const BUTTON_TEXT_FILL = '#111'
-const GHOST_SEED = 1
-const GHOST_OPACITY = 0.4
-
 type Button = {
     tag: 'button'
     id: string
@@ -89,7 +88,7 @@ type Button = {
 }
 
 function buttonBoxAt(cursor: Point2d): BoundingBox2d {
-    return BoundingBox2d.withDimensions(BUTTON_W, BUTTON_H, cursor)
+    return BoundingBox2d.withDimensions(140, 44, cursor)
 }
 
 function buttonText(box: BoundingBox2d, label: string, parentId: string, opacity: number): TextSpec {
@@ -97,10 +96,14 @@ function buttonText(box: BoundingBox2d, label: string, parentId: string, opacity
         id: `${parentId}:text`,
         center: box.centerPoint(),
         text: label,
-        fontFamily: BUTTON_FONT_FAMILY,
-        fontSize: BUTTON_FONT_SIZE,
-        fill: BUTTON_TEXT_FILL,
-        opacity,
+        svgProps: {
+            fontFamily: '"Kalam", cursive',
+            fontSize: 20,
+            fill: '#111',
+            opacity,
+            textAnchor: 'middle',
+            dominantBaseline: 'central',
+        },
     }
 }
 
@@ -180,7 +183,7 @@ export class CanvasStore {
             case 'placingButton': {
                 if (m.cursor) {
                     const box = buttonBoxAt(m.cursor)
-                    items.push(buttonViewItem(box, GHOST_SEED, BUTTON_LABEL, 'ghost', GHOST_OPACITY))
+                    items.push(buttonViewItem(box, 1, 'Button', 'ghost', 0.4))
                 }
                 break
             }
@@ -226,7 +229,7 @@ export class CanvasStore {
                     id: crypto.randomUUID(),
                     box,
                     seed: randomSeed(),
-                    label: BUTTON_LABEL,
+                    label: 'Button',
                 })
                 m.cursor = point
                 return

@@ -7,31 +7,12 @@ import { FontSamples } from './FontSamples'
 import { assertNever } from './utils'
 
 function renderPath(p: PathSpec) {
-    return (
-        <path
-            key={p.id}
-            d={p.d}
-            stroke={p.stroke}
-            strokeWidth={p.strokeWidth}
-            fill={p.fill}
-            opacity={p.opacity}
-        />
-    )
+    return <path key={p.id} {...p.svgProps} />
 }
 
 function renderText(t: TextSpec) {
     return (
-        <text
-            key={t.id}
-            x={t.center.xCoordinate}
-            y={t.center.yCoordinate}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontFamily={t.fontFamily}
-            fontSize={t.fontSize}
-            fill={t.fill}
-            opacity={t.opacity}
-        >
+        <text key={t.id} x={t.center.xCoordinate} y={t.center.yCoordinate} {...t.svgProps}>
             {t.text}
         </text>
     )
@@ -90,7 +71,7 @@ export default observer(function App() {
     }
 
     return (
-        <div className="h-screen w-screen overflow-hidden bg-white">
+        <div className="h-screen w-screen overflow-hidden bg-white select-none">
             <svg
                 className="h-full w-full"
                 onMouseDown={e => store.handleMouseDown(toMouseInput(e))}
