@@ -18,6 +18,7 @@ Authoritative documentation for the following libraries lives in docs/external-l
 2. MobX-utils — mobx-utils/README.md
 3. Rough.js — roughjs-wiki/Home.md
 4. elm-geometry — elm-geometry/src/ (Elm 2D/3D geometry, API design reference)
+5. MDN web docs — search via QMD MCP (`mdn-web-*` collections, e.g. `mdn-web-svg`, `mdn-web-api-<interface>`). Raw markdown at mdn-content/files/en-us/web/
 
 ## Workflow files
 
@@ -33,6 +34,10 @@ Prefer shipping features. Note refactor ideas for later. After each feature ship
 If running, read their output instead of spawning one-shot runs: `pnpm typecheck:watch` (recompile on save), `pnpm test:ui` (rerun tests on save), `pnpm dev` (HMR).
 
 If none running, start all three in background.
+
+## Geometry
+
+Move geometry-related computations into the `src/geom/` package. Adding new geom models and expanding the API is encouraged — if an operation or type is missing, add a method or introduce a new one rather than inlining the computation at the call site. Any geometry library (e.g. elm-geometry in `docs/external-lib-docs/`) can serve as a reference for naming ideas; none is authoritative.
 
 ## Rules maintenance
 
