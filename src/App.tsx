@@ -4,6 +4,7 @@ import { type MouseEvent } from 'react'
 import { CanvasStore, type MouseInput, type PathSpec, type TextSpec, type ViewItem } from './store'
 import { Point2d } from './geom/Point2d'
 import { FontSamples } from './FontSamples'
+import { BrowserMock } from './BrowserMock'
 import { assertNever } from './utils'
 
 function renderPath(p: PathSpec) {
@@ -81,6 +82,7 @@ export default observer(function App() {
                 <Canvas store={store} />
                 <SelectionBorder store={store} />
                 <FontSamples />
+                <BrowserMock />
             </svg>
         </div>
     )
