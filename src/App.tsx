@@ -1,34 +1,60 @@
 import { useEffect, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { type MouseEvent } from 'react'
-import { CanvasStore, type MouseInput, type PathSpec } from './store'
+import { CanvasStore, type MouseInput, type PathSpec, type TextSpec, type ViewItem } from './store'
 import { Point2d } from './geom/Point2d'
 import { FontSamples } from './FontSamples'
+import { assertNever } from './utils'
 
-function RoughRect({ paths }: { paths: ReadonlyArray<PathSpec> }) {
+function renderPath(p: PathSpec) {
     return (
-        <g>
-            {paths.map(p => (
-                <path key={p.key} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill ?? 'none'} />
-            ))}
-        </g>
+        <path
+            key={p.id}
+            d={p.d}
+            stroke={p.stroke}
+            strokeWidth={p.strokeWidth}
+            fill={p.fill}
+            opacity={p.opacity}
+        />
     )
 }
 
-const RectsView = observer(function RectsView({ store }: { store: CanvasStore }) {
+function renderText(t: TextSpec) {
     return (
-        <>
-            {store.committedShapes.map(s => (
-                <RoughRect key={s.id} paths={s.paths} />
-            ))}
-        </>
+        <text
+            key={t.id}
+            x={t.center.xCoordinate}
+            y={t.center.yCoordinate}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontFamily={t.fontFamily}
+            fontSize={t.fontSize}
+            fill={t.fill}
+            opacity={t.opacity}
+        >
+            {t.text}
+        </text>
     )
-})
+}
 
-const Preview = observer(function Preview({ store }: { store: CanvasStore }) {
-    const paths = store.previewPaths
-    if (!paths) return null
-    return <RoughRect paths={paths} />
+function renderViewItem(item: ViewItem) {
+    switch (item.tag) {
+        case 'rect':
+            return <g key={item.id}>{item.paths.map(renderPath)}</g>
+        case 'button':
+            return (
+                <g key={item.id}>
+                    {item.paths.map(renderPath)}
+                    {renderText(item.text)}
+                </g>
+            )
+        default:
+            return assertNever(item)
+    }
+}
+
+const Canvas = observer(function Canvas({ store }: { store: CanvasStore }) {
+    return <>{store.viewItems.map(renderViewItem)}</>
 })
 
 const SelectionBorder = observer(function SelectionBorder({ store }: { store: CanvasStore }) {
@@ -71,8 +97,7 @@ export default observer(function App() {
                 onMouseMove={e => store.handleMouseMove(toMouseInput(e))}
                 onMouseUp={e => store.handleMouseUp(toMouseInput(e))}
             >
-                <RectsView store={store} />
-                <Preview store={store} />
+                <Canvas store={store} />
                 <SelectionBorder store={store} />
                 <FontSamples />
             </svg>

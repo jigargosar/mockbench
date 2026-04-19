@@ -5,30 +5,118 @@ import { Point2d } from './geom/Point2d'
 import { Vector2d } from './geom/Vector2d'
 import { assertNever } from './utils'
 
+// ── Shared constants ──────────────────────────────
 const SELECTION_BORDER_PX = 4
 const MIN_COMMIT_PX = 2
 
+// ── rough.js generator ────────────────────────────
 const generator = rough.generator()
 
-export type PathSpec = {
-    key: string
-    d: string
-    stroke: string
-    strokeWidth: number
-    fill: string | null
-}
-
-type Rect = {
-    id: string
-    box: BoundingBox2d
-    seed: number
-}
-
+// ── Seed ──────────────────────────────────────────
 // rough.js treats seed=0 as "re-seed on every call", so we exclude it via `|| 1`.
 function randomSeed(): number {
     return Math.floor(Math.random() * 2 ** 31) || 1
 }
 
+// ── SVG render specs ──────────────────────────────
+export type PathSpec = {
+    readonly id: string
+    readonly d: string
+    readonly stroke: string
+    readonly strokeWidth: number
+    readonly fill: string
+    readonly opacity?: number
+}
+
+export type TextSpec = {
+    readonly id: string
+    readonly center: Point2d
+    readonly text: string
+    readonly fontFamily: string
+    readonly fontSize: number
+    readonly fill: string
+    readonly opacity?: number
+}
+
+// ── View items ────────────────────────────────────
+export type ViewItem =
+    | { readonly tag: 'rect'; readonly id: string; readonly paths: ReadonlyArray<PathSpec> }
+    | { readonly tag: 'button'; readonly id: string; readonly paths: ReadonlyArray<PathSpec>; readonly text: TextSpec }
+
+// ── Rect ──────────────────────────────────────────
+type Rect = {
+    tag: 'rect'
+    id: string
+    box: BoundingBox2d
+    seed: number
+}
+
+function rectPaths(box: BoundingBox2d, seed: number, opacity: number): ReadonlyArray<PathSpec> {
+    const { x, y, w, h } = box.toObject()
+    return generator.toPaths(generator.rectangle(x, y, w, h, { seed })).map((p) => ({
+        // Using the path `d` string as the React key. Not ideal — long, and two widgets
+        // with identical box+seed would collide — but we have no simple per-path id
+        // from rough.js. Deferred; not a real problem at current scale.
+        id: p.d,
+        d: p.d,
+        stroke: p.stroke,
+        strokeWidth: p.strokeWidth,
+        fill: p.fill ?? 'none',
+        opacity,
+    }))
+}
+
+function rectViewItem(box: BoundingBox2d, seed: number, id: string, opacity: number): ViewItem {
+    return { tag: 'rect', id, paths: rectPaths(box, seed, opacity) }
+}
+
+// ── Button ────────────────────────────────────────
+const BUTTON_W = 140
+const BUTTON_H = 44
+const BUTTON_LABEL = 'Button'
+const BUTTON_FONT_FAMILY = '"Kalam", cursive'
+const BUTTON_FONT_SIZE = 20
+const BUTTON_TEXT_FILL = '#111'
+const GHOST_SEED = 1
+const GHOST_OPACITY = 0.4
+
+type Button = {
+    tag: 'button'
+    id: string
+    box: BoundingBox2d
+    seed: number
+    label: string
+}
+
+function buttonBoxAt(cursor: Point2d): BoundingBox2d {
+    return BoundingBox2d.withDimensions(BUTTON_W, BUTTON_H, cursor)
+}
+
+function buttonText(box: BoundingBox2d, label: string, parentId: string, opacity: number): TextSpec {
+    return {
+        id: `${parentId}:text`,
+        center: box.centerPoint(),
+        text: label,
+        fontFamily: BUTTON_FONT_FAMILY,
+        fontSize: BUTTON_FONT_SIZE,
+        fill: BUTTON_TEXT_FILL,
+        opacity,
+    }
+}
+
+function buttonViewItem(box: BoundingBox2d, seed: number, label: string, id: string, opacity: number): ViewItem {
+    return {
+        tag: 'button',
+        id,
+        paths: rectPaths(box, seed, opacity),
+        text: buttonText(box, label, id, opacity),
+    }
+}
+
+// ── Widget ────────────────────────────────────────
+type Widget = Rect | Button
+
+// ── Input ─────────────────────────────────────────
 export type MouseInput = {
     point: Point2d
     button: number
@@ -38,28 +126,32 @@ export type KeyboardInput = {
     key: string
 }
 
+// ── Mode ──────────────────────────────────────────
 type Mode =
     | { tag: 'idle' }
     | { tag: 'drawing'; start: Point2d; current: Point2d; seed: number }
     | { tag: 'selected'; selectedId: string }
     | { tag: 'moving'; selectedId: string; lastPoint: Point2d }
+    | { tag: 'placingButton'; cursor: Point2d | null }
 
+// ── Store ─────────────────────────────────────────
 export class CanvasStore {
-    private rects: Rect[] = []
+    private widgets: Widget[] = []
     private mode: Mode = { tag: 'idle' }
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true })
     }
 
-    private get selectedRect(): Rect | undefined {
+    private get selectedWidget(): Widget | undefined {
         const m = this.mode
         switch (m.tag) {
             case 'selected':
             case 'moving':
-                return this.rects.find(r => r.id === m.selectedId)
+                return this.widgets.find((w) => w.id === m.selectedId)
             case 'idle':
             case 'drawing':
+            case 'placingButton':
                 return undefined
             default:
                 assertNever(m)
@@ -67,26 +159,49 @@ export class CanvasStore {
     }
 
     get selectionBox(): BoundingBox2d | null {
-        return this.selectedRect?.box.expandBy(SELECTION_BORDER_PX) ?? null
+        return this.selectedWidget?.box.expandBy(SELECTION_BORDER_PX) ?? null
     }
 
-    get committedShapes(): ReadonlyArray<{ id: string; paths: ReadonlyArray<PathSpec> }> {
-        return this.rects.map(r => ({ id: r.id, paths: this.rectPaths(r.box, r.seed, r.id) }))
-    }
-
-    get previewPaths(): ReadonlyArray<PathSpec> | null {
+    // Perf note (deferred, unmeasured): mousemove in `placingButton` invalidates `viewItems`
+    // and re-runs `rectPaths` (rough.js) for every committed widget. If this shows up in
+    // profiling, split the ghost into its own computed, or cache paths on the widget.
+    get viewItems(): ReadonlyArray<ViewItem> {
+        const items: ViewItem[] = []
+        for (const w of this.widgets) {
+            items.push(this.widgetViewItem(w))
+        }
         const m = this.mode
         switch (m.tag) {
             case 'drawing': {
                 const box = BoundingBox2d.from(m.start, m.current)
-                return box.isEmpty() ? null : this.rectPaths(box, m.seed, 'preview')
+                if (!box.isEmpty()) items.push(rectViewItem(box, m.seed, 'preview', 1))
+                break
+            }
+            case 'placingButton': {
+                if (m.cursor) {
+                    const box = buttonBoxAt(m.cursor)
+                    items.push(buttonViewItem(box, GHOST_SEED, BUTTON_LABEL, 'ghost', GHOST_OPACITY))
+                }
+                break
             }
             case 'idle':
             case 'selected':
             case 'moving':
-                return null
+                break
             default:
                 assertNever(m)
+        }
+        return items
+    }
+
+    private widgetViewItem(widget: Widget): ViewItem {
+        switch (widget.tag) {
+            case 'rect':
+                return rectViewItem(widget.box, widget.seed, widget.id, 1)
+            case 'button':
+                return buttonViewItem(widget.box, widget.seed, widget.label, widget.id, 1)
+            default:
+                assertNever(widget)
         }
     }
 
@@ -100,6 +215,22 @@ export class CanvasStore {
             case 'moving':
                 this.mode = { tag: 'selected', selectedId: m.selectedId }
                 return
+            case 'placingButton': {
+                // Stamping: mode stays `placingButton` after each click so the user can place
+                // multiple buttons rapidly; Escape exits. Whether this or one-shot (exit after
+                // first place) is a better default needs real user A/B testing — leaving as
+                // stamping for now.
+                const box = buttonBoxAt(point)
+                this.widgets.push({
+                    tag: 'button',
+                    id: crypto.randomUUID(),
+                    box,
+                    seed: randomSeed(),
+                    label: BUTTON_LABEL,
+                })
+                m.cursor = point
+                return
+            }
             case 'idle':
             case 'selected':
                 break
@@ -121,11 +252,14 @@ export class CanvasStore {
                 m.current = point
                 break
             case 'moving': {
-                const rect = this.rects.find(r => r.id === m.selectedId)
-                if (rect) rect.box = rect.box.translateBy(Vector2d.from(m.lastPoint, point))
+                const widget = this.widgets.find((w) => w.id === m.selectedId)
+                if (widget) widget.box = widget.box.translateBy(Vector2d.from(m.lastPoint, point))
                 m.lastPoint = point
                 break
             }
+            case 'placingButton':
+                m.cursor = point
+                break
             case 'idle':
             case 'selected':
                 break
@@ -145,6 +279,7 @@ export class CanvasStore {
                 break
             case 'idle':
             case 'selected':
+            case 'placingButton':
                 break
             default:
                 assertNever(m)
@@ -152,29 +287,21 @@ export class CanvasStore {
     }
 
     handleKeyDown({ key }: KeyboardInput) {
+        // No modifier-key filtering yet. Letter shortcuts (b, r) will fire under Ctrl/Cmd
+        // and when typing in text inputs. Deferred — no text inputs exist; revisit when one is added.
         // Mac uses Backspace as the delete key; Windows/Linux use Delete. Accept both.
         if (key === 'Delete' || key === 'Backspace') this.deleteSelected()
-        // Escape cancels the current gesture.
         else if (key === 'Escape') this.mode = { tag: 'idle' }
+        else if (key === 'b' || key === 'B') this.mode = { tag: 'placingButton', cursor: null }
+        else if (key === 'r' || key === 'R') this.mode = { tag: 'idle' }
     }
 
-    private findTopmostAt(point: Point2d): Rect | undefined {
-        for (let i = this.rects.length - 1; i >= 0; i--) {
-            const r = this.rects[i]
-            if (r.box.contains(point)) return r
+    private findTopmostAt(point: Point2d): Widget | undefined {
+        for (let i = this.widgets.length - 1; i >= 0; i--) {
+            const w = this.widgets[i]
+            if (w.box.contains(point)) return w
         }
         return undefined
-    }
-
-    private rectPaths(box: BoundingBox2d, seed: number, keyPrefix: string): ReadonlyArray<PathSpec> {
-        const { x, y, w, h } = box.toObject()
-        return generator.toPaths(generator.rectangle(x, y, w, h, { seed })).map((p, i) => ({
-            key: `${keyPrefix}:${i}`,
-            d: p.d,
-            stroke: p.stroke,
-            strokeWidth: p.strokeWidth,
-            fill: p.fill ?? null,
-        }))
     }
 
     private finishDrawing() {
@@ -183,7 +310,7 @@ export class CanvasStore {
             case 'drawing': {
                 const box = BoundingBox2d.from(m.start, m.current)
                 if (box.width > MIN_COMMIT_PX && box.height > MIN_COMMIT_PX) {
-                    this.rects.push({ id: crypto.randomUUID(), box, seed: m.seed })
+                    this.widgets.push({ tag: 'rect', id: crypto.randomUUID(), box, seed: m.seed })
                 }
                 this.mode = { tag: 'idle' }
                 break
@@ -191,6 +318,7 @@ export class CanvasStore {
             case 'idle':
             case 'selected':
             case 'moving':
+            case 'placingButton':
                 break
             default:
                 assertNever(m)
@@ -201,14 +329,15 @@ export class CanvasStore {
         const m = this.mode
         switch (m.tag) {
             case 'selected': {
-                const idx = this.rects.findIndex(r => r.id === m.selectedId)
-                if (idx >= 0) this.rects.splice(idx, 1)
+                const idx = this.widgets.findIndex((w) => w.id === m.selectedId)
+                if (idx >= 0) this.widgets.splice(idx, 1)
                 this.mode = { tag: 'idle' }
                 break
             }
             case 'idle':
             case 'drawing':
             case 'moving':
+            case 'placingButton':
                 break
             default:
                 assertNever(m)
