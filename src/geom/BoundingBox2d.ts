@@ -17,6 +17,21 @@ export class BoundingBox2d {
         return new BoundingBox2d(minX, minY, width, height)
     }
 
+    static withDimensions(width: number, height: number, center: Point2d): BoundingBox2d {
+        const halfW = Math.abs(width) / 2
+        const halfH = Math.abs(height) / 2
+        return new BoundingBox2d(
+            center.xCoordinate - halfW,
+            center.yCoordinate - halfH,
+            Math.abs(width),
+            Math.abs(height),
+        )
+    }
+
+    centerPoint(): Point2d {
+        return Point2d.xy(this.x + this.w / 2, this.y + this.h / 2)
+    }
+
     contains(point: Point2d): boolean {
         const px = point.xCoordinate
         const py = point.yCoordinate
@@ -45,6 +60,10 @@ export class BoundingBox2d {
         return this.w === 0 || this.h === 0
     }
 
+    // Negative margin shrinks (acts as a `shrinkBy`). No collapse check — a large
+    // enough negative margin will produce negative dimensions. Elm-geometry differs:
+    // its `expandBy` abs-es the margin, and a separate `offsetBy` returns Maybe on
+    // collapse. We'll add a dedicated `shrinkBy` with guards if the need arises.
     expandBy(margin: number): BoundingBox2d {
         return new BoundingBox2d(
             this.x - margin,

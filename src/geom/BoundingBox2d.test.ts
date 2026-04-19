@@ -90,6 +90,39 @@ describe('BoundingBox2d', () => {
         })
     })
 
+    describe('withDimensions', () => {
+        it('produces a box centered on the given point with the given width and height', () => {
+            const box = BoundingBox2d.withDimensions(10, 4, Point2d.xy(50, 20))
+            expect(box.minX).toBe(45)
+            expect(box.minY).toBe(18)
+            expect(box.width).toBe(10)
+            expect(box.height).toBe(4)
+        })
+
+        it('treats negative width/height as absolute values', () => {
+            const box = BoundingBox2d.withDimensions(-10, -4, Point2d.xy(0, 0))
+            expect(box.width).toBe(10)
+            expect(box.height).toBe(4)
+            expect(box.minX).toBe(-5)
+            expect(box.minY).toBe(-2)
+        })
+    })
+
+    describe('centerPoint', () => {
+        it('returns the center point of the box', () => {
+            const box = BoundingBox2d.from(Point2d.xy(2, 4), Point2d.xy(8, 10))
+            const c = box.centerPoint()
+            expect(c.xCoordinate).toBe(5)
+            expect(c.yCoordinate).toBe(7)
+        })
+
+        it('round-trips with withDimensions', () => {
+            const center = Point2d.xy(7, 11)
+            const box = BoundingBox2d.withDimensions(20, 30, center)
+            expect(box.centerPoint().equals(center)).toBe(true)
+        })
+    })
+
     describe('isEmpty', () => {
         it('returns true when width is zero', () => {
             const box = BoundingBox2d.from(Point2d.xy(3, 2), Point2d.xy(3, 6))
