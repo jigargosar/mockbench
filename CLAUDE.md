@@ -39,6 +39,6 @@ If none running, start all three in background.
 
 Move geometry-related computations into the `src/geom/` package. Adding new geom models and expanding the API is encouraged — if an operation or type is missing, add a method or introduce a new one rather than inlining the computation at the call site. Any geometry library (e.g. elm-geometry in `docs/external-lib-docs/`) can serve as a reference for naming ideas; none is authoritative.
 
-## Rules maintenance
+## Gotchas maintenance
 
-When a bug surfaces — whether newly discovered or a variant of something already known — capture the lesson in `docs/mobx-react-rules.md`. Add a new rule if the lesson is orthogonal to existing ones; merge into the closest existing rule if it's a variant. The rules file is the canonical dos-and-don'ts ledger; keep it current.
+When a bug surfaces — whether newly discovered or a variant of something already known — capture the lesson in `docs/mobx-react-gotchas.md`. Add a new gotcha if the lesson is orthogonal to existing ones; merge into the closest existing gotcha if it's a variant. The gotchas file is the canonical dos-and-don'ts ledger; keep it current.
