@@ -1,3 +1,4 @@
+import { observer } from 'mobx-react-lite'
 import rough from 'roughjs'
 
 const generator = rough.generator()
@@ -19,11 +20,10 @@ function squigglePaths(x: number, y: number, width: number, seed: number) {
     return generator.toPaths(generator.curve(pts, { seed, roughness: 1 }))
 }
 
-function BrowserWindow({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+const BrowserWindow = observer(function BrowserWindow({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
     const titleBarH = 40
     const titleBarY = y
     const contentY = y + titleBarH
-    const contentH = h - titleBarH
 
     // Traffic lights
     const lightR = 7
@@ -62,10 +62,12 @@ function BrowserWindow({ x, y, w, h }: { x: number; y: number; w: number; h: num
             {renderPaths(urlSquiggle)}
         </g>
     )
-}
+})
 
-export const BrowserMock = () => (
-    <g>
-        <BrowserWindow x={40} y={160} w={600} h={360} />
-    </g>
-)
+export const BrowserMock = observer(function BrowserMock() {
+    return (
+        <g>
+            <BrowserWindow x={40} y={160} w={600} h={360} />
+        </g>
+    )
+})

@@ -1,3 +1,4 @@
+import { observer } from 'mobx-react-lite'
 import rough from 'roughjs'
 
 const generator = rough.generator()
@@ -9,7 +10,7 @@ const FONT_SAMPLES: ReadonlyArray<{ name: string; family: string }> = [
     { name: 'Kalam', family: '"Kalam", cursive' },
 ]
 
-function FontSampleButton({ x, y, name, family }: { x: number; y: number; name: string; family: string }) {
+const FontSampleButton = observer(function FontSampleButton({ x, y, name, family }: { x: number; y: number; name: string; family: string }) {
     const W = 220
     const H = 48
     const seed = 1
@@ -24,14 +25,16 @@ function FontSampleButton({ x, y, name, family }: { x: number; y: number; name: 
             </text>
         </g>
     )
-}
+})
 
-export const FontSamples = () => (
-    <g>
-        {FONT_SAMPLES.map((f, i) => {
-            const col = i % 3
-            const row = Math.floor(i / 3)
-            return <FontSampleButton key={f.name} x={20 + col * 232} y={20 + row * 60} name={f.name} family={f.family} />
-        })}
-    </g>
-)
+export const FontSamples = observer(function FontSamples() {
+    return (
+        <g>
+            {FONT_SAMPLES.map((f, i) => {
+                const col = i % 3
+                const row = Math.floor(i / 3)
+                return <FontSampleButton key={f.name} x={20 + col * 232} y={20 + row * 60} name={f.name} family={f.family} />
+            })}
+        </g>
+    )
+})
