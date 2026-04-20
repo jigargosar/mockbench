@@ -57,13 +57,20 @@ type Rect = {
     seed: number
 }
 
+// React key must be stable across renders for the same logical element. The path `d`
+// string is NOT stable: rough.js bakes absolute (x,y,w,h) into `d`, so translating a
+// widget during drag shifts every coordinate and produces a different `d` each frame.
+// Using `d` as the key makes React treat each frame's paths as new elements → unmount
+// old <path>, mount new one per frame. Using the path's index keeps the key stable
+// (rough.js emits paths deterministically in the same order for a given shape), so
+// React diffs `d` as a prop and patches it in place via setAttribute — no DOM swap.
+// Cite: react-optimizations.md L64–67 "Don't use array indexes or any value that might
+// change in the future as key." Index is safe here because paths within one widget
+// don't reorder, and siblings (per-widget <g>) mean the index is unique in its scope.
 function rectPaths(box: BoundingBox2d, seed: number, opacity: number): ReadonlyArray<PathSpec> {
     const { x, y, w, h } = box.toObject()
-    return generator.toPaths(generator.rectangle(x, y, w, h, { seed })).map((p) => ({
-        // Using the path `d` string as the React key. Not ideal — long, and two widgets
-        // with identical box+seed would collide — but we have no simple per-path id
-        // from rough.js. Deferred; not a real problem at current scale.
-        id: p.d,
+    return generator.toPaths(generator.rectangle(x, y, w, h, { seed })).map((p, i) => ({
+        id: `${i}`,
         svgProps: {
             d: p.d,
             stroke: p.stroke,
