@@ -1,9 +1,11 @@
-# MobX + React Rules
+# MobX + React Gotchas
 
-Dos and don'ts for using MobX with React. Two sections: integration
-rules (where MobX and React meet), then pure MobX rules.
+Dos and don'ts for using MobX with React. Called "gotchas" because each
+item has a real cost if ignored — not abstract style preferences. Three
+sections: integration (where MobX and React meet), pure MobX, and
+debugging recipes.
 
-Format per rule: 2-3 lines that clearly state the rule and its
+Format per gotcha: 2-3 lines that clearly state the rule and its
 reasoning, followed by a permalink to the authoritative docs.
 Numbering is continuous across sections.
 
@@ -197,3 +199,48 @@ Numbering is continuous across sections.
 45. Dev-only invariant intercepts are fine as a safety net on top of action-level validation
     Why: Docs call general `intercept` use an AOP anti-pattern. Our narrow use differs: the intercept sits in the constructor next to the actions it guards (not cross-cutting-by-stealth), fires only in DEV (`import.meta.env.DEV`), and exists to catch a future mutation site that forgets to maintain the invariant. Actions still enforce the invariant by construction — the intercept is the tripwire, not the primary guard. Defense in depth, not "validate during mutation instead of before."
     [docs](https://mobx.js.org/intercept-and-observe.html)
+
+---
+
+## Debugging reactivity issues
+
+Recommended rhythm: React Profiler → find the component rendering too
+often → drop `trace()` in its body → MobX prints which observable
+triggered the re-run → fix granularity at the source. Clean up trace
+calls before committing.
+
+46. `trace()` inside a computed or observer body
+    Why: On the next invalidation, MobX logs *why* it re-ran — which observable changed and what derivation was triggered. Pass `trace(true)` to drop into the debugger at the fire site. Targeted, minimal noise. Best first tool for "why is this re-running?"
+    [docs](https://mobx.js.org/analyzing-reactivity.html#trace)
+
+47. Render-count ref logs in suspect components
+    Why: `const r = useRef(0); r.current++; console.log('Foo', r.current)` answers "which component is re-rendering per frame, and how often?" without guessing. Orthogonal to MobX — but the combination (React Profiler heatmap → render-count log → `trace()`) pinpoints reactivity leaks fast. Remove after investigation.
+    [docs](https://react.dev/reference/react/useRef)
+
+48. `spy(event => ...)` at app startup for global firing order
+    Why: Logs every MobX event — actions, reactions, observable writes, computed evaluations. Noisy (hundreds/sec during drag) but shows chain order. Filter by `event.type === 'update'` or `'action'` to cut noise. Call the returned disposer when done. Use for "what chain fired between click X and broken state Y?"
+    [docs](https://mobx.js.org/analyzing-reactivity.html#spy)
+
+49. `configure({ observableRequiresReaction: true })` in dev
+    Why: Warns when an observable is read outside a reactive context — usually means a component forgot `observer` or a handler is reading state it shouldn't. Catches the bug class where a component silently renders stale data in prod because it never subscribed. See gotcha #1 for the same rule from the opposite side.
+    [docs](https://mobx.js.org/configuration.html#observablerequiresreaction)
+
+50. `configure({ enforceActions: 'always' })` in dev
+    Why: Warns on observable writes outside an action. Default `'observed'` misses mutations while nothing is subscribed yet, surfacing later as latent bugs. `'always'` catches them at origin. See gotcha #41 for the full reasoning.
+    [docs](https://mobx.js.org/configuration.html#enforceactions)
+
+51. `configure({ disableErrorBoundaries: true })` in dev only
+    Why: Without this, MobX errors are swallowed by React's error-boundary machinery and you lose the stack trace. Flipping it on surfaces the real stack. Dev only — in prod it's the wrong trade-off (user sees a broken app instead of a fallback).
+    [docs](https://mobx.js.org/configuration.html#disableerrorboundaries)
+
+52. `getDependencyTree` / `getObserverTree` for graph dumps
+    Why: Low-level API that returns the dependency graph of a reaction/computed at a point in time. Useful when `trace()` shows an unexpected dep and you need to walk the actual graph to find where the extra subscription was created.
+    [docs](https://mobx.js.org/analyzing-reactivity.html#getobservertree-getdependencytree)
+
+53. mobx-devtools browser extension — close before perf traces
+    Why: Useful for interactive inspection of stores and mutations. But it serializes store state on every action to stream to the panel — at 60-120Hz drag rates, that alone can dominate CPU and distort any perf trace. Always close the panel before recording a Chrome Performance trace.
+    [docs](https://github.com/mobxjs/mobx-devtools)
+
+54. Dev-mode overhead dwarfs prod in perf measurements
+    Why: StrictMode double-renders, `observableRequiresReaction`/`enforceActions` checks, and MobX devtools all add real CPU in dev. Observed 5× swings between dev and prod in real use. Always measure perf concerns against `pnpm build && pnpm preview`, not the dev server. If prod is fine, the problem is dev tooling, not the app.
+    [docs](https://react.dev/reference/react/StrictMode)
