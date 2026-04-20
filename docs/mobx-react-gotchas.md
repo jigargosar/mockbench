@@ -1,13 +1,43 @@
 # MobX + React Gotchas
 
 Dos and don'ts for using MobX with React. Called "gotchas" because each
-item has a real cost if ignored — not abstract style preferences. Three
-sections: integration (where MobX and React meet), pure MobX, and
-debugging recipes.
+item has a real cost if ignored — not abstract style preferences. Four
+sections: debugging toolbox (what's available to diagnose), integration
+(where MobX and React meet), pure MobX, and debugging recipes.
 
 Format per gotcha: 2-3 lines that clearly state the rule and its
 reasoning, followed by a permalink to the authoritative docs.
 Numbering is continuous across sections.
+
+---
+
+## Debugging toolbox
+
+No fixed order — pick by symptom. Having the list prevents zig-zag.
+
+### Used in this codebase
+
+1. React DevTools — "Highlight updates when components render" toggle.
+2. Prod build + preview — exposed dev-tooling cost (50% → 10%).
+3. Chrome Performance — layout/style per second counter (150/sec).
+4. Chrome Performance — flame graph top self-time (removeChild/appendChild).
+5. React DevTools Profiler — ranked view (per-component render counts).
+6. `useRef` render-count logs in components.
+7. Browser console isolation test.
+8. MobX devtools extension — close before perf traces; it distorts them.
+9. `console.log` for render debug — last resort, lean on `trace()` or React DevTools Profiler first; reaching for `console.log` usually means better tools got skipped.
+
+### Unused — worth reaching for
+
+1. Chrome Performance — event log "reason" field on Layout / Recalc Style.
+2. `trace()` inside a computed or observer body.
+3. `trace(true)` to drop into debugger at fire site.
+4. `spy(e => ...)` at app startup for global event stream.
+5. `why-did-you-render` library.
+6. `getDependencyTree` / `getObserverTree` for reactivity-graph dumps.
+7. Grep for React keys derived from mutating data.
+
+**Discipline**: one change at a time, measure before/after, revert if no improvement.
 
 ---
 
