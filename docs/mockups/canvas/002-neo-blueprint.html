@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MockBench — Neo-Blueprint</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
+<style>
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    letter-spacing: -0.005em;
+  }
+  .font-hand { font-family: 'Kalam', cursive; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Neo-blueprint dot grid + graph paper hybrid */
+  .bp-canvas {
+    background-color: #eef2f7;
+    background-image:
+      /* major graph lines */
+      linear-gradient(to right, rgba(30, 64, 120, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(30, 64, 120, 0.06) 1px, transparent 1px),
+      /* minor dots */
+      radial-gradient(circle at 1px 1px, rgba(30, 64, 120, 0.18) 1px, transparent 0);
+    background-size: 96px 96px, 96px 96px, 24px 24px;
+    background-position: 0 0, 0 0, 0 0;
+  }
+  .bp-canvas::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(37, 99, 235, 0.05), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 100% 100%, rgba(30, 58, 138, 0.06), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* crosshair cursor vibe on canvas interactions area */
+  .crosshair { cursor: crosshair; }
+
+  /* thin ruler ticks */
+  .ruler-x {
+    background-image: repeating-linear-gradient(to right,
+      rgba(30,64,120,0.35) 0, rgba(30,64,120,0.35) 1px,
+      transparent 1px, transparent 24px);
+  }
+  .ruler-y {
+    background-image: repeating-linear-gradient(to bottom,
+      rgba(30,64,120,0.35) 0, rgba(30,64,120,0.35) 1px,
+      transparent 1px, transparent 24px);
+  }
+
+  /* selection halo pulse */
+  @keyframes halo {
+    0%, 100% { box-shadow: 0 0 0 1px #2563eb, 0 0 0 5px rgba(37,99,235,0.18); }
+    50%      { box-shadow: 0 0 0 1px #2563eb, 0 0 0 7px rgba(37,99,235,0.10); }
+  }
+  .halo { animation: halo 2.4s ease-in-out infinite; }
+
+  /* staggered reveal */
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .rise { animation: rise 520ms cubic-bezier(.2,.7,.2,1) both; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased overflow-hidden">
+
+<!-- TOP CHROME BAR -->
+<header class="relative z-20 h-11 flex items-center justify-between px-4 bg-white border-b border-slate-200/80">
+  <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-5 h-5 rounded-[4px] bg-blue-600 grid place-items-center shadow-[0_1px_0_0_rgba(255,255,255,0.2)_inset,0_1px_2px_rgba(30,64,120,0.25)]">
+        <svg viewBox="0 0 16 16" class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 13 L3 3 L8 8 L13 3 L13 13"/></svg>
+      </div>
+      <span class="text-[13px] font-semibold tracking-tight text-slate-900">MockBench</span>
+      <span class="text-[11px] font-mono text-slate-400">v0.3.1</span>
+    </div>
+    <div class="h-5 w-px bg-slate-200"></div>
+    <nav class="flex items-center gap-1 text-[12px] text-slate-600">
+      <button class="px-2 py-1 rounded hover:bg-slate-100">File</button>
+      <button class="px-2 py-1 rounded hover:bg-slate-100">Edit</button>
+      <button class="px-2 py-1 rounded hover:bg-slate-100">View</button>
+      <button class="px-2 py-1 rounded hover:bg-slate-100">Insert</button>
+      <button class="px-2 py-1 rounded hover:bg-slate-100">Arrange</button>
+    </nav>
+  </div>
+
+  <div class="flex items-center gap-2 text-[11px] font-mono text-slate-500">
+    <div class="flex items-center gap-1 px-2 py-1 rounded bg-slate-50 border border-slate-200">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+      <span>saved · 2m ago</span>
+    </div>
+    <div class="px-2 py-1 rounded bg-slate-50 border border-slate-200">SHEET-01 / Landing</div>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <button class="text-[12px] px-2.5 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50">Share</button>
+    <button class="text-[12px] px-3 py-1 rounded bg-slate-900 text-white hover:bg-slate-800">Present</button>
+    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-700 ring-2 ring-white shadow-sm grid place-items-center text-[10px] font-semibold text-white">JG</div>
+  </div>
+</header>
+
+<!-- MAIN AREA -->
+<main class="relative h-[calc(100vh-44px-24px)] flex">
+
+  <!-- FLOATING SIDEBAR -->
+  <aside class="absolute left-5 top-5 bottom-5 w-[300px] z-10 rise">
+    <div class="h-full bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_10px_30px_-10px_rgba(30,64,120,0.25),0_2px_6px_-2px_rgba(30,64,120,0.1)] flex flex-col overflow-hidden">
+
+      <!-- sidebar header -->
+      <div class="px-4 pt-4 pb-3 border-b border-slate-100">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono uppercase tracking-[0.18em] text-blue-600">§ 01</span>
+            <h2 class="text-[13px] font-semibold text-slate-900">Widgets</h2>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="w-6 h-6 grid place-items-center rounded hover:bg-slate-100 text-slate-500">
+              <svg viewBox="0 0 16 16" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="m13 13-2.5-2.5"/></svg>
+            </button>
+            <button class="w-6 h-6 grid place-items-center rounded hover:bg-slate-100 text-slate-500">
+              <svg viewBox="0 0 16 16" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h10"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="mt-3 relative">
+          <input class="w-full h-8 pl-7 pr-2 rounded-md bg-slate-50 border border-slate-200 text-[12px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15" placeholder="Search widgets…" />
+          <svg class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="m13 13-2.5-2.5"/></svg>
+          <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-400 border border-slate-200 rounded px-1">⌘K</span>
+        </div>
+      </div>
+
+      <!-- tabs -->
+      <div class="px-4 pt-3">
+        <div class="flex items-center gap-1 text-[11px]">
+          <button class="px-2 py-1 rounded-md bg-slate-100 text-slate-900 font-medium">Basics</button>
+          <button class="px-2 py-1 rounded-md text-slate-500 hover:bg-slate-50">Forms</button>
+          <button class="px-2 py-1 rounded-md text-slate-500 hover:bg-slate-50">Layout</button>
+          <button class="px-2 py-1 rounded-md text-slate-500 hover:bg-slate-50">Data</button>
+        </div>
+      </div>
+
+      <!-- widget list -->
+      <div class="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-2.5">
+
+        <!-- Widget: Rectangle -->
+        <div class="group relative rounded-lg border border-slate-200 hover:border-slate-300 transition-colors p-3 cursor-grab bg-white">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-mono text-slate-400">01</span>
+                <h3 class="text-[12.5px] font-semibold text-slate-900">Rectangle</h3>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Empty container</p>
+            </div>
+            <kbd class="text-[10px] font-mono text-slate-500 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5">R</kbd>
+          </div>
+          <div class="mt-3 h-[72px] rounded-md bg-slate-50/60 border border-dashed border-slate-200 grid place-items-center">
+            <svg id="sb-rect" width="160" height="56"></svg>
+          </div>
+        </div>
+
+        <!-- Widget: Button (ACTIVE) -->
+        <div class="group relative rounded-lg border border-blue-500 bg-blue-50/30 p-3 cursor-grab halo">
+          <div class="absolute -top-2 left-3 px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-mono tracking-wider uppercase">active</div>
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-mono text-blue-600">02</span>
+                <h3 class="text-[12.5px] font-semibold text-slate-900">Button</h3>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Primary action</p>
+            </div>
+            <kbd class="text-[10px] font-mono text-blue-700 bg-white border border-blue-200 rounded px-1.5 py-0.5">B</kbd>
+          </div>
+          <div class="mt-3 h-[72px] rounded-md bg-white border border-dashed border-blue-200 grid place-items-center relative">
+            <svg id="sb-button" width="160" height="56"></svg>
+            <span class="absolute inset-0 grid place-items-center font-hand text-[18px] text-slate-900 pointer-events-none select-none">Button</span>
+          </div>
+        </div>
+
+        <!-- Widget: Browser -->
+        <div class="group relative rounded-lg border border-slate-200 hover:border-slate-300 transition-colors p-3 cursor-grab bg-white">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-mono text-slate-400">03</span>
+                <h3 class="text-[12.5px] font-semibold text-slate-900">Browser</h3>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Window with URL bar</p>
+            </div>
+            <kbd class="text-[10px] font-mono text-slate-500 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5">W</kbd>
+          </div>
+          <div class="mt-3 h-[96px] rounded-md bg-slate-50/60 border border-dashed border-slate-200 grid place-items-center">
+            <svg id="sb-browser" width="200" height="80"></svg>
+          </div>
+        </div>
+
+        <!-- divider -->
+        <div class="pt-1 pb-1 flex items-center gap-2">
+          <div class="h-px flex-1 bg-slate-100"></div>
+          <span class="text-[9px] font-mono uppercase tracking-[0.2em] text-slate-400">coming soon</span>
+          <div class="h-px flex-1 bg-slate-100"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 opacity-60">
+          <div class="rounded-md border border-slate-200 border-dashed p-2 text-center">
+            <div class="text-[11px] text-slate-600 font-medium">Input</div>
+            <div class="text-[9px] font-mono text-slate-400 mt-0.5">q2 · 2026</div>
+          </div>
+          <div class="rounded-md border border-slate-200 border-dashed p-2 text-center">
+            <div class="text-[11px] text-slate-600 font-medium">Table</div>
+            <div class="text-[9px] font-mono text-slate-400 mt-0.5">q2 · 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- sidebar footer -->
+      <div class="border-t border-slate-100 px-4 py-2.5 flex items-center justify-between text-[11px] text-slate-500">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          <span class="font-mono">3 / 12 widgets</span>
+        </div>
+        <button class="text-slate-600 hover:text-slate-900 font-medium">Browse library →</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CANVAS -->
+  <section class="relative flex-1 bp-canvas crosshair overflow-hidden" style="margin-left: 0;">
+
+    <!-- rulers -->
+    <div class="absolute top-0 left-0 right-0 h-6 bg-white/70 backdrop-blur-sm border-b border-slate-200 z-[5] flex items-end">
+      <div class="h-2 flex-1 ruler-x"></div>
+    </div>
+    <div class="absolute top-0 left-0 bottom-0 w-6 bg-white/70 backdrop-blur-sm border-r border-slate-200 z-[5] flex justify-end">
+      <div class="w-2 h-full ruler-y"></div>
+    </div>
+    <div class="absolute top-0 left-0 w-6 h-6 bg-white z-[6] border-r border-b border-slate-200 grid place-items-center">
+      <svg viewBox="0 0 10 10" class="w-2.5 h-2.5 text-slate-400"><path d="M1 1 L9 1 L9 9 Z" fill="currentColor"/></svg>
+    </div>
+
+    <!-- cartouche (top-right meta panel) -->
+    <div class="absolute top-10 right-5 z-[4] bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg shadow-sm w-[220px] rise" style="animation-delay:.12s">
+      <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-blue-600">Drawing</span>
+        <span class="text-[10px] font-mono text-slate-400">A2 · 1:1</span>
+      </div>
+      <dl class="px-3 py-2 text-[11px] space-y-1.5">
+        <div class="flex justify-between"><dt class="text-slate-500">Project</dt><dd class="text-slate-800 font-medium">Onboarding v2</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Author</dt><dd class="text-slate-800 font-mono">jg</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Revision</dt><dd class="text-slate-800 font-mono">003</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Grid</dt><dd class="text-slate-800 font-mono">24 px</dd></div>
+      </dl>
+    </div>
+
+    <!-- floating toolbar (bottom center) -->
+    <div class="absolute bottom-5 left-1/2 -translate-x-1/2 z-[4] flex items-center gap-1 bg-white border border-slate-200 rounded-xl shadow-[0_10px_30px_-10px_rgba(30,64,120,0.25)] px-1.5 py-1.5 rise" style="animation-delay:.18s">
+      <button class="w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:bg-slate-50" title="Select">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2 L13 8 L9 9 L8 13 Z"/></svg>
+      </button>
+      <button class="w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:bg-slate-50" title="Rectangle">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="10" height="8" rx="1"/></svg>
+      </button>
+      <button class="w-8 h-8 grid place-items-center rounded-lg bg-blue-600 text-white shadow-[0_2px_6px_rgba(37,99,235,0.35)]" title="Button (active)">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="12" height="6" rx="3"/><path d="M5 8h6"/></svg>
+      </button>
+      <button class="w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:bg-slate-50" title="Browser">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12"/><circle cx="4" cy="4.5" r=".5" fill="currentColor"/></svg>
+      </button>
+      <button class="w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:bg-slate-50" title="Text">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M8 4v9M6 13h4"/></svg>
+      </button>
+      <div class="w-px h-5 bg-slate-200 mx-1"></div>
+      <button class="w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:bg-slate-50" title="Hand">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 9V4.5a1 1 0 1 1 2 0V8M7 8V3.5a1 1 0 1 1 2 0V8M9 8V4.5a1 1 0 1 1 2 0V9M11 7.5a1 1 0 1 1 2 0V11a4 4 0 0 1-8 0V8"/></svg>
+      </button>
+      <button class="w-8 h-8 grid place-items-center rounded-lg text-slate-500 hover:bg-slate-50" title="Comment">
+        <svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v7H7l-3 3v-3H3z"/></svg>
+      </button>
+    </div>
+
+    <!-- zoom / coords (bottom right) -->
+    <div class="absolute bottom-5 right-5 z-[4] flex items-center gap-2 text-[11px] font-mono text-slate-500 rise" style="animation-delay:.22s">
+      <div class="bg-white border border-slate-200 rounded-md px-2 py-1">x 482 · y 316</div>
+      <div class="bg-white border border-slate-200 rounded-md px-2 py-1 flex items-center gap-2">
+        <button class="text-slate-400 hover:text-slate-700">−</button>
+        <span class="text-slate-700">100%</span>
+        <button class="text-slate-400 hover:text-slate-700">+</button>
+      </div>
+    </div>
+
+    <!-- PLACED WIDGETS ON CANVAS -->
+
+    <!-- Placed Browser frame -->
+    <div class="absolute top-24 left-[360px] z-[2] rise" style="animation-delay:.3s">
+      <div class="relative">
+        <svg id="canvas-browser" width="520" height="340"></svg>
+        <div class="absolute inset-0 pointer-events-none">
+          <!-- traffic lights labels? no, handled in rough -->
+          <!-- URL placeholder text in hand font -->
+          <div class="absolute left-[92px] top-[34px] font-hand text-[14px] text-slate-400">example.com/dashboard</div>
+          <!-- inner placeholder content -->
+          <div class="absolute left-[36px] top-[82px] font-hand text-[13px] text-slate-500">Hero headline here</div>
+          <div class="absolute left-[36px] top-[108px] font-hand text-[12px] text-slate-400">supporting line of copy…</div>
+        </div>
+        <!-- dimension annotation -->
+        <div class="absolute -top-5 left-0 right-0 flex items-center text-[10px] font-mono text-blue-600/80">
+          <span class="flex-1 border-t border-dashed border-blue-400/60"></span>
+          <span class="px-1.5 bg-[#eef2f7]">520 px</span>
+          <span class="flex-1 border-t border-dashed border-blue-400/60"></span>
+        </div>
+        <!-- widget label tag -->
+        <div class="absolute -top-5 -left-2 text-[9px] font-mono uppercase tracking-widest text-slate-400">W-03 · browser</div>
+      </div>
+    </div>
+
+    <!-- Placed Submit button (selected) -->
+    <div class="absolute top-[300px] left-[440px] z-[3] rise" style="animation-delay:.42s">
+      <div class="relative halo rounded-md">
+        <svg id="canvas-button" width="200" height="64"></svg>
+        <span class="absolute inset-0 grid place-items-center font-hand text-[22px] text-slate-900 pointer-events-none select-none">Submit</span>
+
+        <!-- selection handles -->
+        <span class="absolute -top-1 -left-1 w-2 h-2 bg-white border border-blue-600"></span>
+        <span class="absolute -top-1 -right-1 w-2 h-2 bg-white border border-blue-600"></span>
+        <span class="absolute -bottom-1 -left-1 w-2 h-2 bg-white border border-blue-600"></span>
+        <span class="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-blue-600"></span>
+        <span class="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-white border border-blue-600"></span>
+        <span class="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-2 bg-white border border-blue-600"></span>
+
+        <!-- floating spec label -->
+        <div class="absolute -top-6 left-0 px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-mono uppercase tracking-wider">button · 200 × 64</div>
+
+        <!-- leader line + dimension -->
+        <div class="absolute top-1/2 -right-24 -translate-y-1/2 flex items-center gap-1 text-[10px] font-mono text-slate-400">
+          <span class="w-16 border-t border-dashed border-slate-300"></span>
+          <span>W-02</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- annotation note -->
+    <div class="absolute top-[440px] left-[880px] z-[2] rise" style="animation-delay:.55s">
+      <div class="relative bg-amber-50/80 border border-amber-200 rounded-md px-3 py-2 shadow-sm max-w-[180px]">
+        <div class="text-[9px] font-mono uppercase tracking-widest text-amber-700 mb-1">note</div>
+        <p class="font-hand text-[13px] text-slate-700 leading-snug">confirm copy with team before handoff</p>
+      </div>
+    </div>
+
+    <!-- origin marker -->
+    <div class="absolute top-6 left-6 z-[3] text-[9px] font-mono text-blue-600/70 select-none">
+      <div class="flex items-center gap-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+        <span>0,0</span>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- STATUS BAR -->
+<footer class="relative z-20 h-6 bg-white border-t border-slate-200 flex items-center justify-between px-4 text-[10px] font-mono text-slate-500">
+  <div class="flex items-center gap-3">
+    <span class="text-blue-600">● BUTTON</span>
+    <span>selection · 1</span>
+    <span class="text-slate-300">│</span>
+    <span>snap: grid 24</span>
+    <span class="text-slate-300">│</span>
+    <span>units: px</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <span>rough.js · seed 1337</span>
+    <span class="text-slate-300">│</span>
+    <span>◷ 14:02 UTC</span>
+    <span class="text-slate-300">│</span>
+    <span class="text-emerald-600">● sync ok</span>
+  </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const opts = (over = {}) => ({
+    roughness: 1.6,
+    bowing: 1.4,
+    stroke: '#0f172a',
+    strokeWidth: 1.4,
+    fill: undefined,
+    seed: 1337,
+    ...over
+  });
+
+  // --- SIDEBAR PREVIEWS ---
+  const rRect = rough.svg(document.getElementById('sb-rect'));
+  document.getElementById('sb-rect').appendChild(
+    rRect.rectangle(4, 4, 152, 48, opts({ seed: 11 }))
+  );
+
+  const rBtn = rough.svg(document.getElementById('sb-button'));
+  document.getElementById('sb-button').appendChild(
+    rBtn.rectangle(4, 4, 152, 48, opts({ seed: 22, stroke: '#1d4ed8', strokeWidth: 1.6, fill: '#dbeafe', fillStyle: 'hachure', hachureAngle: -35, hachureGap: 6, fillWeight: 0.8 }))
+  );
+
+  const rBrowser = rough.svg(document.getElementById('sb-browser'));
+  const brSvg = document.getElementById('sb-browser');
+  brSvg.appendChild(rBrowser.rectangle(4, 4, 192, 72, opts({ seed: 33 })));
+  brSvg.appendChild(rBrowser.line(4, 22, 196, 22, opts({ seed: 34, strokeWidth: 1.1 })));
+  // traffic lights
+  [12, 22, 32].forEach((cx, i) => {
+    brSvg.appendChild(rBrowser.circle(cx, 13, 5, opts({ seed: 40 + i, strokeWidth: 1.1 })));
+  });
+  // URL bar
+  brSvg.appendChild(rBrowser.rectangle(44, 9, 144, 9, opts({ seed: 55, strokeWidth: 1.1 })));
+  // squiggly placeholder inside URL bar
+  const squig = (svg, x, y, w, amp = 2, step = 6, seed = 70) => {
+    const pts = [];
+    for (let i = 0; i <= w; i += step) {
+      pts.push([x + i, y + Math.sin(i / 3) * amp]);
+    }
+    svg.appendChild(rough.svg(svg).curve(pts, opts({ seed, strokeWidth: 1 })));
+  };
+  squig(brSvg, 50, 14, 120, 1.6, 6, 77);
+
+  // --- CANVAS: placed Button ---
+  const rCBtn = rough.svg(document.getElementById('canvas-button'));
+  const cbSvg = document.getElementById('canvas-button');
+  cbSvg.appendChild(rCBtn.rectangle(6, 6, 188, 52, opts({ seed: 101, strokeWidth: 1.8, stroke: '#0f172a', fill: '#f8fafc', fillStyle: 'solid' })));
+  // subtle shadow-ish second stroke
+  cbSvg.appendChild(rCBtn.line(10, 60, 192, 60, opts({ seed: 102, strokeWidth: 1, stroke: '#94a3b8' })));
+
+  // --- CANVAS: placed Browser ---
+  const rCBr = rough.svg(document.getElementById('canvas-browser'));
+  const cBr = document.getElementById('canvas-browser');
+  // outer window
+  cBr.appendChild(rCBr.rectangle(8, 8, 504, 324, opts({ seed: 201, strokeWidth: 1.8, fill: '#ffffff', fillStyle: 'solid' })));
+  // chrome divider
+  cBr.appendChild(rCBr.line(8, 52, 512, 52, opts({ seed: 202, strokeWidth: 1.2 })));
+  // traffic lights
+  cBr.appendChild(rCBr.circle(26, 30, 10, opts({ seed: 211, strokeWidth: 1.3, fill: '#fecaca', fillStyle: 'solid' })));
+  cBr.appendChild(rCBr.circle(46, 30, 10, opts({ seed: 212, strokeWidth: 1.3, fill: '#fde68a', fillStyle: 'solid' })));
+  cBr.appendChild(rCBr.circle(66, 30, 10, opts({ seed: 213, strokeWidth: 1.3, fill: '#bbf7d0', fillStyle: 'solid' })));
+  // URL bar
+  cBr.appendChild(rCBr.rectangle(86, 22, 400, 18, opts({ seed: 220, strokeWidth: 1.2 })));
+  // squiggly line under URL text area (subtle)
+  const bigSquig = [];
+  for (let i = 0; i <= 380; i += 8) bigSquig.push([96 + i, 36 + Math.sin(i/4) * 1.2]);
+  cBr.appendChild(rCBr.curve(bigSquig, opts({ seed: 230, strokeWidth: 0.9, stroke: '#94a3b8' })));
+
+  // content blocks inside browser
+  cBr.appendChild(rCBr.rectangle(30, 72, 200, 18, opts({ seed: 301, strokeWidth: 1.3 })));   // headline box
+  cBr.appendChild(rCBr.rectangle(30, 100, 320, 10, opts({ seed: 302, strokeWidth: 1 })));   // subline
+  cBr.appendChild(rCBr.rectangle(30, 116, 300, 10, opts({ seed: 303, strokeWidth: 1 })));   // subline 2
+
+  // card grid
+  cBr.appendChild(rCBr.rectangle(30, 150, 140, 100, opts({ seed: 401, strokeWidth: 1.4, fill: '#f1f5f9', fillStyle: 'solid' })));
+  cBr.appendChild(rCBr.rectangle(186, 150, 140, 100, opts({ seed: 402, strokeWidth: 1.4, fill: '#f1f5f9', fillStyle: 'solid' })));
+  cBr.appendChild(rCBr.rectangle(342, 150, 140, 100, opts({ seed: 403, strokeWidth: 1.4, fill: '#f1f5f9', fillStyle: 'solid' })));
+
+  // little "image" crosses inside cards
+  [30, 186, 342].forEach((x, i) => {
+    cBr.appendChild(rCBr.line(x, 150, x+140, 250, opts({ seed: 410+i, strokeWidth: 0.9, stroke: '#cbd5e1' })));
+    cBr.appendChild(rCBr.line(x+140, 150, x, 250, opts({ seed: 420+i, strokeWidth: 0.9, stroke: '#cbd5e1' })));
+  });
+
+  // footer strip
+  cBr.appendChild(rCBr.rectangle(30, 272, 452, 42, opts({ seed: 501, strokeWidth: 1.2 })));
+});
+</script>
+
+</body>
+</html>

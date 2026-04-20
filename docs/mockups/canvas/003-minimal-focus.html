@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MockBench — Minimal Focus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
+<style>
+  :root { --ink: #1a1a1a; --paper: #fafaf7; }
+  .kalam { font-family: 'Kalam', cursive; }
+  body { font-family: 'Kalam', cursive; background: var(--paper); color: var(--ink); }
+  .dot-grid {
+    background-image: radial-gradient(rgba(26,26,26,0.08) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .tool[data-active="true"] svg { opacity: 1; }
+  .tool svg { opacity: 0.6; transition: opacity .2s ease; }
+  .tool:hover svg { opacity: 1; }
+  .tool[data-active="true"]::before {
+    content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 2px; height: 16px; background: var(--ink); border-radius: 1px;
+  }
+  .tip { pointer-events: none; opacity: 0; transition: opacity .15s ease; }
+  .tool:hover .tip { opacity: 1; }
+</style>
+</head>
+<body class="h-screen w-screen overflow-hidden antialiased">
+
+<div class="flex h-full w-full">
+
+  <!-- Icon rail, flush-left -->
+  <aside class="w-11 h-full flex flex-col items-center pt-4 pb-4 shrink-0 select-none">
+    <!-- Tiny mark -->
+    <div class="w-5 h-5 mb-8 flex items-center justify-center">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 11 L6 3 L8 8 L12 11" />
+      </svg>
+    </div>
+
+    <nav class="flex flex-col items-center gap-1">
+      <!-- Rect -->
+      <button class="tool relative w-8 h-8 flex items-center justify-center rounded group" data-active="false" aria-label="Rectangle">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="3" y="4" width="10" height="8" rx="0.5" />
+        </svg>
+        <span class="tip absolute left-10 top-1/2 -translate-y-1/2 text-[11px] kalam text-neutral-500 whitespace-nowrap">rect</span>
+      </button>
+
+      <!-- Button (active) -->
+      <button class="tool relative w-8 h-8 flex items-center justify-center rounded" data-active="true" aria-label="Button">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+          <rect x="2.5" y="5.5" width="11" height="5" rx="2.5" />
+          <path d="M6 8 h4" />
+        </svg>
+        <span class="tip absolute left-10 top-1/2 -translate-y-1/2 text-[11px] kalam text-neutral-500 whitespace-nowrap">button</span>
+      </button>
+
+      <!-- Browser -->
+      <button class="tool relative w-8 h-8 flex items-center justify-center rounded" data-active="false" aria-label="Browser">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+          <rect x="2.5" y="3" width="11" height="10" rx="0.5" />
+          <path d="M2.5 6 h11" />
+          <circle cx="4.3" cy="4.5" r="0.4" fill="currentColor" />
+          <circle cx="5.8" cy="4.5" r="0.4" fill="currentColor" />
+        </svg>
+        <span class="tip absolute left-10 top-1/2 -translate-y-1/2 text-[11px] kalam text-neutral-500 whitespace-nowrap">browser</span>
+      </button>
+    </nav>
+
+    <div class="mt-auto w-5 h-5 flex items-center justify-center opacity-40">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+        <circle cx="6" cy="6" r="4" />
+        <path d="M6 4 v2 l1.2 1.2" />
+      </svg>
+    </div>
+  </aside>
+
+  <!-- Canvas -->
+  <main class="relative flex-1 h-full dot-grid overflow-hidden">
+
+    <!-- Floating widget group -->
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px]">
+
+      <!-- Browser frame -->
+      <div class="relative">
+        <svg id="browser" class="block w-full" viewBox="0 0 560 320" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="absolute inset-0 px-4 pt-3 flex flex-col pointer-events-none">
+          <div class="flex items-center gap-1.5 h-5">
+            <span class="w-2 h-2 rounded-full border border-neutral-700/60"></span>
+            <span class="w-2 h-2 rounded-full border border-neutral-700/60"></span>
+            <span class="w-2 h-2 rounded-full border border-neutral-700/60"></span>
+          </div>
+          <div class="mt-4 kalam text-[15px] text-neutral-700 tracking-wide">
+            mockbench.app/projects/onboarding
+          </div>
+          <div class="mt-10 kalam text-[22px] text-neutral-800 leading-snug max-w-[70%]">
+            A wireframe is a document of intent.
+          </div>
+          <div class="mt-3 kalam text-[13px] text-neutral-500 max-w-[60%]">
+            think in shapes · defer the polish
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit button, offset -->
+      <div class="relative mt-10 ml-auto w-[180px] h-[56px]">
+        <svg id="btn" class="absolute inset-0 w-full h-full" viewBox="0 0 180 56" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="absolute inset-0 flex items-center justify-center kalam text-[18px] text-neutral-900">
+          Submit
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Status, barely there -->
+    <div class="absolute bottom-3 right-4 kalam text-[11px] text-neutral-400 tracking-wide">
+      untitled · 2 objects
+    </div>
+
+  </main>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const ink = '#1a1a1a';
+
+    const browserSvg = document.getElementById('browser');
+    const rcB = rough.svg(browserSvg);
+    // outer frame
+    browserSvg.appendChild(rcB.rectangle(4, 4, 552, 312, {
+      stroke: ink, strokeWidth: 1.2, roughness: 1.4, bowing: 1.2, fill: 'none'
+    }));
+    // chrome separator
+    browserSvg.appendChild(rcB.line(4, 40, 556, 40, {
+      stroke: ink, strokeWidth: 1, roughness: 1.6
+    }));
+    // squiggly URL placeholder line — a wiggly path
+    const wiggle = [];
+    let x = 50, y = 62;
+    for (let i = 0; i < 40; i++) {
+      wiggle.push([x + i * 8, y + (i % 2 === 0 ? 0 : 3)]);
+    }
+    browserSvg.appendChild(rcB.curve(wiggle, {
+      stroke: ink, strokeWidth: 0.9, roughness: 2.2
+    }));
+    // page content sketch lines
+    browserSvg.appendChild(rcB.line(32, 210, 360, 210, { stroke: ink, strokeWidth: 0.8, roughness: 2 }));
+    browserSvg.appendChild(rcB.line(32, 228, 300, 228, { stroke: ink, strokeWidth: 0.8, roughness: 2 }));
+    browserSvg.appendChild(rcB.line(32, 246, 220, 246, { stroke: ink, strokeWidth: 0.8, roughness: 2.2 }));
+    // small placeholder box
+    browserSvg.appendChild(rcB.rectangle(400, 200, 120, 72, {
+      stroke: ink, strokeWidth: 1, roughness: 1.8, fill: ink, fillStyle: 'hachure',
+      hachureAngle: 40, hachureGap: 6, fillWeight: 0.4
+    }));
+
+    const btnSvg = document.getElementById('btn');
+    const rcBtn = rough.svg(btnSvg);
+    btnSvg.appendChild(rcBtn.rectangle(3, 3, 174, 50, {
+      stroke: ink, strokeWidth: 1.4, roughness: 1.6, bowing: 2, fill: 'none'
+    }));
+    // subtle inner shadow sketch
+    btnSvg.appendChild(rcBtn.line(8, 50, 172, 50, {
+      stroke: ink, strokeWidth: 0.8, roughness: 2
+    }));
+  });
+</script>
+</body>
+</html>

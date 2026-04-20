@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MockBench — Paper Studio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        cream:  '#f4ead5',
+        paper:  '#ede0c4',
+        kraft:  '#d9c6a0',
+        clay:   '#c89b6d',
+        tan:    '#a47148',
+        leather:'#5a3b22',
+        ink:    '#2a2420',
+        moss:   '#6b7a4a',
+        rust:   '#a8432a',
+      },
+      fontFamily: {
+        hand:  ['Kalam', 'cursive'],
+        serif: ['Lora', 'Georgia', 'serif'],
+        sans:  ['"Work Sans"', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        sheet: '0 1px 0 rgba(90,59,34,.08), 0 12px 24px -10px rgba(90,59,34,.25), 0 30px 60px -20px rgba(90,59,34,.18)',
+        tray:  '0 2px 0 rgba(0,0,0,.06) inset, 0 20px 40px -16px rgba(90,59,34,.35), 8px 0 24px -18px rgba(90,59,34,.4)',
+        tack:  '0 1px 2px rgba(0,0,0,.4), 0 3px 6px rgba(0,0,0,.2), inset 0 1px 1px rgba(255,255,255,.35)',
+        chip:  '0 1px 0 rgba(90,59,34,.08), 0 8px 18px -10px rgba(90,59,34,.3)',
+      },
+    }
+  }
+}
+</script>
+<style>
+  /* Paper grain — layered gradients, no images */
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 700px at 78% 18%, rgba(255,244,214,.75), transparent 60%),
+      radial-gradient(900px 600px at 10% 90%, rgba(168,67,42,.06), transparent 55%),
+      radial-gradient(circle at 20% 40%, rgba(90,59,34,.035) 0 1px, transparent 1.5px) 0 0/3px 3px,
+      radial-gradient(circle at 70% 60%, rgba(90,59,34,.03)  0 1px, transparent 1.5px) 1px 2px/4px 4px,
+      linear-gradient(180deg, #f6ecd7 0%, #efe2c3 100%);
+    color: #2a2420;
+    font-family: 'Lora', Georgia, serif;
+  }
+  .paper-grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(90,59,34,.06) 0 1px, transparent 2px),
+      radial-gradient(circle at 80% 70%, rgba(90,59,34,.045) 0 1px, transparent 2px),
+      radial-gradient(circle at 50% 50%, rgba(90,59,34,.03) 0 1px, transparent 2px),
+      linear-gradient(180deg, #fbf3df 0%, #f1e4c3 100%);
+    background-size: 5px 5px, 7px 7px, 11px 11px, 100% 100%;
+  }
+  .leather {
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.05) 0 1px, transparent 2px) 0 0/4px 4px,
+      radial-gradient(circle at 70% 70%, rgba(0,0,0,.18) 0 1px, transparent 2px) 2px 3px/5px 5px,
+      radial-gradient(1000px 300px at 10% 0%, rgba(255,220,180,.12), transparent 60%),
+      linear-gradient(165deg, #6b4526 0%, #4a2d16 55%, #3a2210 100%);
+    color: #f0dcb5;
+  }
+  .stitch {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(240,220,181,.85) 0 8px,
+      transparent 8px 16px
+    );
+    height: 1.5px;
+  }
+  .washi {
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,.18) 0 6px, transparent 6px 14px),
+      linear-gradient(180deg, #d9b26a, #c89b6d);
+    box-shadow: 0 2px 6px rgba(90,59,34,.25), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .tape {
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,.22) 0 5px, transparent 5px 11px),
+      linear-gradient(180deg, rgba(232,210,160,.85), rgba(210,180,120,.78));
+    box-shadow: 0 2px 6px rgba(90,59,34,.25);
+  }
+  .coffee-ring {
+    position: absolute;
+    border-radius: 9999px;
+    border: 3px solid rgba(120,70,30,.14);
+    box-shadow:
+      inset 0 0 0 6px rgba(120,70,30,.04),
+      inset 0 0 30px rgba(120,70,30,.06);
+    filter: blur(.3px);
+  }
+  .ruler {
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0 19px,
+        rgba(90,59,34,.35) 19px 20px),
+      repeating-linear-gradient(90deg,
+        transparent 0 99px,
+        rgba(90,59,34,.55) 99px 100px),
+      linear-gradient(180deg, #e8d4a3, #d9bf85);
+    box-shadow: 0 2px 8px rgba(90,59,34,.25), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .tack {
+    width: 14px; height: 14px; border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #e7c9a1 0%, #a8432a 45%, #5a1d10 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,.45), 0 3px 6px rgba(0,0,0,.25), inset 0 1px 1px rgba(255,255,255,.35);
+  }
+  .tack.brass { background: radial-gradient(circle at 35% 30%, #fff2c7 0%, #c89b6d 40%, #6b4526 100%); }
+  .post-it {
+    background: linear-gradient(180deg, #fff4a8 0%, #f5e37a 100%);
+    box-shadow: 0 1px 1px rgba(0,0,0,.05), 0 10px 18px -8px rgba(90,59,34,.35), inset 0 -2px 0 rgba(0,0,0,.04);
+  }
+  .rotate-tilt-l { transform: rotate(-.6deg); }
+  .rotate-tilt-r { transform: rotate(.8deg); }
+  .scribble-underline {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8'><path d='M2 5 Q 15 1 30 5 T 60 5 T 90 5 T 118 5' fill='none' stroke='%23a8432a' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 8px;
+    padding-bottom: 10px;
+  }
+  .kbd {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f4ead5;
+    border: 1px solid rgba(90,59,34,.25);
+    box-shadow: 0 1px 0 rgba(90,59,34,.25);
+    color: #5a3b22;
+  }
+  .active-chip {
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.5), transparent 60%),
+      linear-gradient(180deg, #fff8e1 0%, #f3e2b2 100%);
+    box-shadow:
+      0 0 0 2px #a8432a,
+      0 0 0 3px rgba(255,244,214,.9),
+      0 14px 22px -12px rgba(168,67,42,.45),
+      inset 0 1px 0 rgba(255,255,255,.6);
+  }
+  .pill-shadow { box-shadow: 0 1px 0 rgba(90,59,34,.08), 0 10px 20px -12px rgba(90,59,34,.3); }
+  .dashed-guide {
+    background-image: linear-gradient(90deg, rgba(90,59,34,.25) 50%, transparent 0);
+    background-size: 6px 1px;
+    background-repeat: repeat-x;
+  }
+  ::selection { background: #f3d48a; color: #2a2420; }
+</style>
+</head>
+<body class="h-screen overflow-hidden">
+
+<div class="h-full w-full flex">
+
+  <!-- ============ SIDEBAR: leather tool tray ============ -->
+  <aside class="leather relative w-[300px] shrink-0 shadow-tray flex flex-col">
+    <!-- stitching -->
+    <div class="absolute inset-x-3 top-3 stitch opacity-70"></div>
+    <div class="absolute inset-x-3 bottom-3 stitch opacity-70"></div>
+    <div class="absolute left-3 top-3 bottom-3 w-px" style="background:repeating-linear-gradient(180deg, rgba(240,220,181,.85) 0 8px, transparent 8px 16px)"></div>
+    <div class="absolute right-3 top-3 bottom-3 w-px" style="background:repeating-linear-gradient(180deg, rgba(240,220,181,.85) 0 8px, transparent 8px 16px)"></div>
+
+    <!-- header: washi tape + brand -->
+    <div class="relative pt-8 pb-6 px-7">
+      <div class="washi absolute -top-2 left-6 right-10 h-6 rounded-sm rotate-tilt-l"></div>
+      <div class="flex items-baseline gap-2 mt-4">
+        <span class="font-serif italic text-[34px] leading-none text-cream">Mock</span>
+        <span class="font-hand text-[30px] leading-none text-clay">bench</span>
+      </div>
+      <div class="mt-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-kraft/80 font-sans">
+        <span>Paper Studio</span>
+        <span class="h-px flex-1 bg-kraft/30"></span>
+        <span>v0.1</span>
+      </div>
+    </div>
+
+    <!-- section label -->
+    <div class="px-7 pb-3 flex items-baseline justify-between">
+      <h3 class="font-serif italic text-cream text-[15px] tracking-wide">Widgets</h3>
+      <span class="font-sans text-[10px] uppercase tracking-[.2em] text-kraft/70">drag or click</span>
+    </div>
+
+    <!-- widget chips -->
+    <div class="px-5 space-y-4 flex-1">
+
+      <!-- Rect -->
+      <button class="group relative w-full text-left rounded-[10px] pill-shadow bg-cream paper-grain px-4 py-4 rotate-tilt-l hover:-translate-y-0.5 transition">
+        <span class="tack absolute -top-1.5 left-4"></span>
+        <div class="flex items-center gap-4">
+          <div class="relative w-[88px] h-[52px] shrink-0">
+            <svg data-sketch="rect" viewBox="0 0 88 52" class="absolute inset-0 w-full h-full"></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-serif text-ink text-[15px] leading-tight">Rectangle</div>
+            <div class="font-sans text-[11px] text-leather/70 mt-0.5">frame · container</div>
+          </div>
+          <span class="kbd">R</span>
+        </div>
+      </button>
+
+      <!-- Button — ACTIVE -->
+      <button class="group relative w-full text-left rounded-[10px] px-4 py-4 rotate-tilt-r active-chip">
+        <span class="tack absolute -top-1.5 left-1/2 -translate-x-1/2"></span>
+        <span class="absolute -top-3 right-4 tape h-5 w-14 rotate-[8deg] rounded-sm"></span>
+        <div class="flex items-center gap-4">
+          <div class="relative w-[88px] h-[52px] shrink-0">
+            <svg data-sketch="button-preview" viewBox="0 0 88 52" class="absolute inset-0 w-full h-full"></svg>
+            <span class="absolute inset-0 grid place-items-center font-hand text-ink text-[15px]">Button</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <div class="font-serif text-ink text-[15px] leading-tight">Button</div>
+              <span class="font-sans text-[9px] uppercase tracking-[.2em] text-rust bg-rust/10 border border-rust/30 rounded-full px-1.5 py-[1px]">active</span>
+            </div>
+            <div class="font-sans text-[11px] text-leather/75 mt-0.5">label · action</div>
+          </div>
+          <span class="kbd">B</span>
+        </div>
+      </button>
+
+      <!-- Browser -->
+      <button class="group relative w-full text-left rounded-[10px] pill-shadow bg-cream paper-grain px-4 py-4 hover:-translate-y-0.5 transition">
+        <span class="tack brass absolute -top-1.5 right-5"></span>
+        <div class="flex items-center gap-4">
+          <div class="relative w-[88px] h-[52px] shrink-0">
+            <svg data-sketch="browser-preview" viewBox="0 0 88 52" class="absolute inset-0 w-full h-full"></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-serif text-ink text-[15px] leading-tight">Browser</div>
+            <div class="font-sans text-[11px] text-leather/70 mt-0.5">window · chrome</div>
+          </div>
+          <span class="kbd">W</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- footer: post-it note -->
+    <div class="px-6 pb-7 pt-2">
+      <div class="post-it relative px-4 py-3 rotate-[-2deg] rounded-[2px]">
+        <span class="tack brass absolute -top-1.5 left-1/2 -translate-x-1/2"></span>
+        <p class="font-hand text-ink text-[14px] leading-snug">
+          tip: hold <span class="kbd">⇧</span> to<br>keep it sketchy straight.
+        </p>
+        <div class="mt-1 font-serif italic text-[11px] text-leather/70">— j.</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN: drafting table ============ -->
+  <main class="relative flex-1 overflow-hidden">
+
+    <!-- ruler across top -->
+    <div class="ruler absolute top-0 left-0 right-0 h-7 z-20"></div>
+    <div class="absolute top-7 left-0 right-0 h-px bg-leather/20 z-20"></div>
+
+    <!-- top bar controls sitting on the ruler -->
+    <div class="absolute top-0 left-0 right-0 h-7 z-30 flex items-center justify-between px-6">
+      <div class="flex items-center gap-3 font-sans text-[11px] uppercase tracking-[.2em] text-leather/80">
+        <span class="inline-block w-2 h-2 rounded-full bg-rust"></span>
+        <span>Untitled Sheet</span>
+        <span class="text-leather/40">/</span>
+        <span class="italic font-serif lowercase tracking-normal text-leather/70">saved a moment ago</span>
+      </div>
+      <div class="flex items-center gap-4 font-sans text-[11px] text-leather/80">
+        <span>100%</span><span class="text-leather/40">·</span>
+        <span>ƒ grid</span><span class="text-leather/40">·</span>
+        <span>share</span>
+      </div>
+    </div>
+
+    <!-- atmospheric: coffee ring + crumbs -->
+    <div class="coffee-ring w-[140px] h-[140px] right-[6%] top-[14%]"></div>
+    <div class="coffee-ring w-[70px] h-[70px] right-[4%] top-[23%] opacity-70"></div>
+
+    <!-- floating canvas sheet -->
+    <section class="absolute inset-0 pt-16 pb-10 pl-14 pr-14 flex items-stretch">
+      <div class="relative flex-1 rotate-tilt-l">
+        <!-- paper sheet -->
+        <div class="relative h-full w-full rounded-[4px] paper-grain shadow-sheet overflow-hidden">
+          <!-- torn top edge accent -->
+          <div class="absolute inset-x-0 top-0 h-1.5" style="background:linear-gradient(90deg, transparent 0 2%, rgba(90,59,34,.15) 2% 3%, transparent 3% 6%, rgba(90,59,34,.12) 6% 7%, transparent 7% 100%)"></div>
+
+          <!-- tape corners -->
+          <div class="absolute -top-3 left-10 tape h-6 w-20 rotate-[-8deg] rounded-sm"></div>
+          <div class="absolute -top-3 right-16 tape h-6 w-24 rotate-[6deg] rounded-sm"></div>
+
+          <!-- sheet header -->
+          <div class="relative px-10 pt-10">
+            <div class="flex items-end justify-between">
+              <div>
+                <div class="font-sans text-[10px] uppercase tracking-[.3em] text-leather/60">Sheet 01 · Canvas</div>
+                <h1 class="mt-1 font-serif text-[34px] leading-tight text-ink">
+                  <span class="scribble-underline">Onboarding</span>
+                  <span class="font-hand text-clay">— rough draft</span>
+                </h1>
+              </div>
+              <div class="text-right font-serif italic text-leather/70 text-[13px]">
+                <div>17 · IV · MMXXVI</div>
+                <div class="font-sans not-italic text-[10px] uppercase tracking-[.25em] mt-1 text-leather/60">revision a</div>
+              </div>
+            </div>
+            <div class="mt-4 h-px dashed-guide"></div>
+          </div>
+
+          <!-- canvas working area -->
+          <div class="relative px-10 py-10 h-[calc(100%-180px)]">
+
+            <!-- dotted grid ghost -->
+            <div class="absolute inset-10 opacity-[.25] pointer-events-none"
+              style="background-image: radial-gradient(circle, rgba(90,59,34,.55) 1px, transparent 1.3px); background-size: 22px 22px;"></div>
+
+            <!-- guide line -->
+            <div class="absolute left-10 right-10 top-[46%] dashed-guide opacity-50"></div>
+
+            <!-- PLACED: Submit Button -->
+            <div class="absolute left-[9%] top-[18%] w-[210px] h-[68px] rotate-tilt-r">
+              <svg data-sketch="btn-submit" viewBox="0 0 210 68" class="absolute inset-0 w-full h-full"></svg>
+              <span class="absolute inset-0 grid place-items-center font-hand text-ink text-[22px]">Submit</span>
+              <!-- selection handles -->
+              <span class="absolute -top-1.5 -left-1.5 w-2.5 h-2.5 rounded-sm bg-cream border border-rust"></span>
+              <span class="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-sm bg-cream border border-rust"></span>
+              <span class="absolute -bottom-1.5 -left-1.5 w-2.5 h-2.5 rounded-sm bg-cream border border-rust"></span>
+              <span class="absolute -bottom-1.5 -right-1.5 w-2.5 h-2.5 rounded-sm bg-cream border border-rust"></span>
+              <!-- label tag -->
+              <div class="absolute -bottom-7 left-0 font-sans text-[10px] uppercase tracking-[.22em] text-rust/80">◆ button · primary</div>
+            </div>
+
+            <!-- PLACED: Browser frame -->
+            <div class="absolute left-[28%] top-[38%] w-[560px] h-[320px] rotate-tilt-l">
+              <svg data-sketch="browser-frame" viewBox="0 0 560 320" class="absolute inset-0 w-full h-full"></svg>
+              <!-- traffic lights overlay labels (positioned above svg too via css if desired) -->
+              <div class="absolute left-6 top-6 flex gap-2">
+                <span class="w-3 h-3 rounded-full bg-rust/80 shadow-[inset_0_1px_0_rgba(255,255,255,.4)]"></span>
+                <span class="w-3 h-3 rounded-full bg-[#d7a43a] shadow-[inset_0_1px_0_rgba(255,255,255,.4)]"></span>
+                <span class="w-3 h-3 rounded-full bg-moss shadow-[inset_0_1px_0_rgba(255,255,255,.4)]"></span>
+              </div>
+              <!-- URL bar label -->
+              <div class="absolute left-24 top-4 right-6 h-8 flex items-center px-3 font-hand text-ink/70 text-[14px]">
+                mockbench.studio/sheet/01
+              </div>
+              <!-- inner content placeholder lines -->
+              <div class="absolute left-8 right-8 top-[74px] bottom-8 flex flex-col gap-3 pt-2 font-hand text-ink/80">
+                <div class="h-5 w-2/3">
+                  <svg data-sketch="squiggle" data-length="360" viewBox="0 0 360 20" class="w-full h-full"></svg>
+                </div>
+                <div class="h-5 w-1/2">
+                  <svg data-sketch="squiggle" data-length="260" viewBox="0 0 260 20" class="w-full h-full"></svg>
+                </div>
+                <div class="h-5 w-4/5">
+                  <svg data-sketch="squiggle" data-length="420" viewBox="0 0 420 20" class="w-full h-full"></svg>
+                </div>
+                <div class="mt-auto flex items-center gap-3">
+                  <div class="relative w-[120px] h-[36px]">
+                    <svg data-sketch="btn-ghost" viewBox="0 0 120 36" class="absolute inset-0 w-full h-full"></svg>
+                    <span class="absolute inset-0 grid place-items-center font-hand text-ink text-[14px]">Continue →</span>
+                  </div>
+                  <span class="font-serif italic text-[12px] text-leather/70">or press <span class="kbd">↵</span></span>
+                </div>
+              </div>
+              <!-- tag -->
+              <div class="absolute -top-7 left-0 font-sans text-[10px] uppercase tracking-[.22em] text-leather/70">◇ browser · desktop</div>
+            </div>
+
+            <!-- margin annotation -->
+            <div class="absolute right-10 bottom-16 w-[190px] rotate-[3deg]">
+              <div class="font-hand text-ink text-[15px] leading-snug">
+                keep the CTA <u class="decoration-rust decoration-wavy">above</u> the fold, always.
+              </div>
+              <div class="mt-1 font-serif italic text-[11px] text-leather/70">— note to self</div>
+            </div>
+
+            <!-- arrow from note toward button -->
+            <svg data-sketch="arrow" viewBox="0 0 400 200" class="absolute right-[14%] bottom-[16%] w-[320px] h-[160px] pointer-events-none"></svg>
+          </div>
+
+          <!-- footer strip -->
+          <div class="absolute inset-x-0 bottom-0 h-10 border-t border-leather/15 px-10 flex items-center justify-between font-sans text-[10px] uppercase tracking-[.25em] text-leather/55">
+            <span>drawn by hand · felt by click</span>
+            <div class="flex gap-5">
+              <span>x: 612</span><span>y: 384</span><span>∠ −0.6°</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- floating inspector card -->
+        <div class="absolute -right-6 top-20 w-[210px] rotate-[2deg] z-10">
+          <div class="bg-cream paper-grain rounded-md shadow-chip border border-leather/10 p-4">
+            <span class="tack absolute -top-1.5 left-1/2 -translate-x-1/2"></span>
+            <div class="font-sans text-[10px] uppercase tracking-[.25em] text-leather/60">Inspector</div>
+            <div class="mt-1 font-serif text-[15px] text-ink">Button · Submit</div>
+            <div class="mt-3 space-y-1.5 text-[12px] font-sans text-leather">
+              <div class="flex justify-between"><span>W</span><span class="font-hand text-ink text-[14px]">210</span></div>
+              <div class="flex justify-between"><span>H</span><span class="font-hand text-ink text-[14px]">68</span></div>
+              <div class="flex justify-between"><span>Roughness</span><span class="font-hand text-ink text-[14px]">1.8</span></div>
+              <div class="flex justify-between"><span>Fill</span><span class="font-hand text-ink text-[14px]">cream</span></div>
+            </div>
+            <div class="mt-3 h-px dashed-guide"></div>
+            <div class="mt-3 font-serif italic text-[11px] text-leather/70 leading-snug">
+              “A wireframe is a document of intent, not a visual asset.”
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const common = { stroke: '#2a2420', strokeWidth: 1.6, roughness: 1.8, bowing: 1.6, fill: 'transparent' };
+
+    document.querySelectorAll('svg[data-sketch]').forEach(svg => {
+      const rc = rough.svg(svg);
+      const kind = svg.getAttribute('data-sketch');
+      const vb = svg.viewBox.baseVal;
+      const W = vb.width, H = vb.height;
+
+      const addNode = n => svg.appendChild(n);
+
+      if (kind === 'rect') {
+        addNode(rc.rectangle(4, 4, W - 8, H - 8, { ...common, fillStyle: 'hachure', fill: 'rgba(200,155,109,.15)', hachureGap: 6 }));
+      }
+
+      else if (kind === 'button-preview') {
+        addNode(rc.rectangle(4, 6, W - 8, H - 12, { ...common, fill: 'rgba(255,244,214,.9)', fillStyle: 'solid' }));
+      }
+
+      else if (kind === 'browser-preview') {
+        addNode(rc.rectangle(4, 6, W - 8, H - 12, { ...common, fill: 'rgba(255,244,214,.9)', fillStyle: 'solid' }));
+        addNode(rc.line(4, 18, W - 4, 18, { ...common, strokeWidth: 1.2 }));
+        addNode(rc.circle(12, 12, 4, { ...common, fill: '#a8432a', fillStyle: 'solid', strokeWidth: 1 }));
+        addNode(rc.circle(20, 12, 4, { ...common, fill: '#d7a43a', fillStyle: 'solid', strokeWidth: 1 }));
+        addNode(rc.circle(28, 12, 4, { ...common, fill: '#6b7a4a', fillStyle: 'solid', strokeWidth: 1 }));
+        // wavy url placeholder
+        const d = wavy(38, 12, 42, 3);
+        addNode(rc.path(d, { ...common, strokeWidth: 1.2 }));
+      }
+
+      else if (kind === 'btn-submit') {
+        addNode(rc.rectangle(4, 4, W - 8, H - 8, { ...common, fill: 'rgba(200,155,109,.18)', fillStyle: 'hachure', hachureGap: 8, hachureAngle: -30, roughness: 2.2 }));
+      }
+
+      else if (kind === 'btn-ghost') {
+        addNode(rc.rectangle(2, 2, W - 4, H - 4, { ...common, strokeWidth: 1.3, roughness: 2.2 }));
+      }
+
+      else if (kind === 'browser-frame') {
+        // main frame
+        addNode(rc.rectangle(4, 4, W - 8, H - 8, { ...common, fill: 'rgba(255,244,214,.92)', fillStyle: 'solid', roughness: 2.2 }));
+        // top chrome separator
+        addNode(rc.line(4, 54, W - 4, 54, { ...common, strokeWidth: 1.3 }));
+        // url bar outline
+        addNode(rc.rectangle(84, 18, W - 84 - 24, 24, { ...common, strokeWidth: 1.2, roughness: 2.4 }));
+        // squiggly placeholder inside url (rendered after text too — subtle)
+        addNode(rc.path(wavy(260, 30, W - 84 - 160, 2.2), { stroke: '#a8432a', strokeWidth: 1, fill: 'transparent', roughness: 1.2 }));
+      }
+
+      else if (kind === 'squiggle') {
+        const len = parseInt(svg.getAttribute('data-length') || W, 10);
+        addNode(rc.path(wavy(4, 12, len - 8, 3), { ...common, strokeWidth: 1.3, roughness: 1.4 }));
+      }
+
+      else if (kind === 'arrow') {
+        // curved arrow from lower-right to upper-left
+        const path = 'M 380 170 C 260 160, 180 110, 40 30';
+        addNode(rc.path(path, { stroke: '#a8432a', strokeWidth: 1.8, roughness: 2.4, bowing: 2, fill: 'transparent' }));
+        // arrowhead
+        addNode(rc.path('M 40 30 L 58 38 M 40 30 L 50 14', { stroke: '#a8432a', strokeWidth: 1.8, roughness: 1.6, fill: 'transparent' }));
+      }
+    });
+
+    function wavy(x, y, length, amp) {
+      const step = 14;
+      let d = `M ${x} ${y}`;
+      let dir = 1;
+      for (let i = step; i <= length; i += step) {
+        d += ` Q ${x + i - step / 2} ${y + dir * amp}, ${x + i} ${y}`;
+        dir *= -1;
+      }
+      return d;
+    }
+  });
+</script>
+</body>
+</html>
