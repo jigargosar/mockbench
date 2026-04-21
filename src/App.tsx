@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { type MouseEvent } from 'react'
-import { CanvasStore, type MouseInput, type PathSpec, type TextSpec, type ViewItem } from './store'
+import { CanvasStore, type MouseInput, type PathSpec, type TextSpec, type WidgetViewModel, type Widget } from './store'
 import { Point2d } from './geom/Point2d'
 import { FontSamples } from './FontSamples'
 import { BrowserMock } from './BrowserMock'
@@ -19,24 +19,53 @@ function renderText(t: TextSpec) {
     )
 }
 
-function renderViewItem(item: ViewItem) {
-    switch (item.tag) {
+function renderView(vm: WidgetViewModel) {
+    switch (vm.tag) {
         case 'rect':
-            return <g key={item.id}>{item.paths.map(renderPath)}</g>
+            return <g>{vm.paths.map(renderPath)}</g>
         case 'button':
             return (
-                <g key={item.id}>
-                    {item.paths.map(renderPath)}
-                    {renderText(item.text)}
+                <g>
+                    {vm.paths.map(renderPath)}
+                    {renderText(vm.text)}
                 </g>
             )
         default:
-            return assertNever(item)
+            return assertNever(vm)
     }
 }
 
+// Per-widget observer — subscribes only to `widget.viewModel`, which depends on this
+// widget's own fields. Dragging widget A invalidates only A's viewModel computed; other
+// WidgetViews stay silent. "Dereference late" (react-integration L236, react-optimizations L69).
+const WidgetView = observer(function WidgetView({ widget }: { widget: Widget }) {
+    return renderView(widget.viewModel)
+})
+
+// Thin observer over the widgets array. Renders per-widget children; subscribes only
+// to the array identity/length (add, remove, reorder), not to individual widget fields.
+const WidgetsView = observer(function WidgetsView({ store }: { store: CanvasStore }) {
+    return <>{store.widgets.map(w => <WidgetView key={w.id} widget={w} />)}</>
+})
+
+const Preview = observer(function Preview({ store }: { store: CanvasStore }) {
+    const vm = store.previewViewModel
+    return vm ? renderView(vm) : null
+})
+
+const Ghost = observer(function Ghost({ store }: { store: CanvasStore }) {
+    const vm = store.ghostViewModel
+    return vm ? renderView(vm) : null
+})
+
 const Canvas = observer(function Canvas({ store }: { store: CanvasStore }) {
-    return <>{store.viewItems.map(renderViewItem)}</>
+    return (
+        <>
+            <WidgetsView store={store} />
+            <Preview store={store} />
+            <Ghost store={store} />
+        </>
+    )
 })
 
 const SelectionBorder = observer(function SelectionBorder({ store }: { store: CanvasStore }) {
