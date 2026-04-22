@@ -204,6 +204,10 @@ type Mode =
 export class CanvasStore {
     private _widgets: Widget[] = []
     private mode: Mode = { tag: 'idle' }
+    // Last cursor position over the canvas, tracked across all mouse events. Used so the
+    // button ghost can appear immediately on `B` keydown at the user's current cursor,
+    // without waiting for the first mousemove after the keypress.
+    private lastMousePoint: Point2d | null = null
 
     constructor() {
         makeAutoObservable(this, {}, { autoBind: true })
@@ -276,6 +280,7 @@ export class CanvasStore {
     }
 
     handleMouseMove({ point }: MouseInput) {
+        this.lastMousePoint = point
         const m = this.mode
         switch (m.tag) {
             case 'drawing':
@@ -317,11 +322,26 @@ export class CanvasStore {
     }
 
     handleKeyDown({ key }: KeyboardInput) {
-        // Mac uses Backspace as delete; Windows/Linux use Delete. Accept both.
-        if (key === 'Delete' || key === 'Backspace') this.deleteSelected()
-        else if (key === 'Escape') this.mode = { tag: 'idle' }
-        else if (key === 'b' || key === 'B') this.mode = { tag: 'placingButton', cursor: null }
-        else if (key === 'r' || key === 'R') this.mode = { tag: 'idle' }
+        switch (key) {
+            // Mac uses Backspace as delete; Windows/Linux use Delete. Accept both.
+            case 'Delete':
+            case 'Backspace':
+                this.deleteSelected()
+                break
+            case 'Escape':
+                this.mode = { tag: 'idle' }
+                break
+            case 'b':
+            case 'B':
+                this.mode = { tag: 'placingButton', cursor: this.lastMousePoint }
+                break
+            case 'r':
+            case 'R':
+                this.mode = { tag: 'idle' }
+                break
+            default:
+                break
+        }
     }
 
     private findTopmostAt(point: Point2d): Widget | undefined {
