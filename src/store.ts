@@ -6,8 +6,9 @@ import { Vector2d } from './geom/Vector2d'
 import { assertNever } from './utils'
 
 // ── Shared constants ──────────────────────────────
-const SELECTION_BORDER_PX = 4
-const MIN_COMMIT_PX = 2
+
+
+
 
 // ── rough.js generator ────────────────────────────
 const generator = rough.generator()
@@ -75,16 +76,16 @@ function rectPaths(box: BoundingBox2d, seed: number, opacity: number): ReadonlyA
 // Button" on Button itself.
 
 export class Rect {
-    readonly tag = 'rect' as const
 
-    static fromDrag(start: Point2d, current: Point2d, seed: number): Rect | null {
-        const box = BoundingBox2d.from(start, current)
-        if (box.width <= MIN_COMMIT_PX || box.height <= MIN_COMMIT_PX) return null
+    static init(start: Point2d, current: Point2d, seed: number): Rect | null {
+        const box = BoundingBox2d.fromPoints(start, current)
+        const foo = 2
+        if (box.width <= foo || box.height <= foo) return null
         return new Rect(crypto.randomUUID(), box, seed)
     }
 
     static previewViewModel(start: Point2d, current: Point2d, seed: number): WidgetViewModel | null {
-        const box = BoundingBox2d.from(start, current)
+        const box = BoundingBox2d.fromPoints(start, current)
         if (box.isEmpty()) return null
         return { tag: 'rect', paths: rectPaths(box, seed, 1) }
     }
@@ -115,7 +116,6 @@ export class Rect {
 }
 
 export class Button {
-    readonly tag = 'button' as const
 
     static boxAt(cursor: Point2d): BoundingBox2d {
         return BoundingBox2d.withDimensions(140, 44, cursor)
@@ -233,7 +233,7 @@ export class CanvasStore {
     }
 
     get selectionBox(): BoundingBox2d | null {
-        return this.selectedWidget?.expandedBox(SELECTION_BORDER_PX) ?? null
+        return this.selectedWidget?.expandedBox(4) ?? null
     }
 
     get previewViewModel(): WidgetViewModel | null {
@@ -356,7 +356,7 @@ export class CanvasStore {
         const m = this.mode
         switch (m.tag) {
             case 'drawing': {
-                const rect = Rect.fromDrag(m.start, m.current, m.seed)
+                const rect = Rect.init(m.start, m.current, m.seed)
                 if (rect) this._widgets.push(rect)
                 this.mode = { tag: 'idle' }
                 break

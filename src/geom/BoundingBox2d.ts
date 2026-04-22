@@ -9,7 +9,7 @@ export class BoundingBox2d {
         private readonly h: number,
     ) {}
 
-    static from(p1: Point2d, p2: Point2d): BoundingBox2d {
+    static fromPoints(p1: Point2d, p2: Point2d): BoundingBox2d {
         const minX = Math.min(p1.xCoordinate, p2.xCoordinate)
         const minY = Math.min(p1.yCoordinate, p2.yCoordinate)
         const width = Math.abs(p1.xCoordinate - p2.xCoordinate)
